@@ -1,0 +1,1 @@
+declare module 'p-camera-h5';

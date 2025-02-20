@@ -1,0 +1,52 @@
+{
+  "name": "p-camera-h5",
+  "version": "1.0.0-beta.1",
+  "description": "p-camera-h5",
+  "main": "./lib/p-camera-h5.es.js",
+  "browser": "./lib/p-camera-h5.umd.js",
+  "unpkg": "./lib/p-camera-h5.umd.js",
+  "type": "module",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "cross-env NODE_ENV=dev rollup -c -w"
+  },
+  "bugs": {
+    "url": "https://github.com/pbstar/p-camera-h5/issues"
+  },
+  "files": [
+    "lib",
+    "index.d.ts",
+    "README.md"
+  ],
+  "contributors": [
+    {
+      "name": "彭勃",
+      "email": "pbstar@sina.cn"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pbstar/p-camera-h5.git"
+  },
+  "homepage": "https://github.com/pbstar/p-camera-h5",
+  "keywords": [
+    "p-camera-h5",
+    "camera-h5",
+    "camera-js",
+    "camera-vue"
+  ],
+  "author": "pengbo <pbstar@sina.cn>",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^20.14.10",
+    "cross-env": "^7.0.3",
+    "rollup": "^4.17.2",
+    "rollup-plugin-json": "^4.0.0",
+    "rollup-plugin-postcss": "^4.0.2",
+    "rollup-plugin-serve": "^1.1.1",
+    "tslib": "^2.6.3"
+  }
+}
