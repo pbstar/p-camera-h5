@@ -36,6 +36,10 @@
   left: 0;
   object-fit: cover;
 }
+#p-camera-h5 #p-canvas {
+  width: 100%;
+  height: 100%;
+}
 #p-camera-h5 #p-watermark {
   position: absolute;
 }
