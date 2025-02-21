@@ -1,13 +1,16 @@
 import style from "./assets/style.css";
-type opt = {
+type WatermarkConfig = {
+  text: string;
+  image?: string;
+  position: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+  color: string;
+  fontSize: string;
+  margin?: number;
+};
+
+type CameraOptions = {
   el: HTMLElement;
-  watermark: {
-    text: string;
-    image: string;
-    position: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-    color: string;
-    fontSize: string;
-  };
+  watermark: WatermarkConfig;
 };
 const elTemplate = `
   <div id="p-camera-h5">
@@ -24,7 +27,7 @@ const elTemplate = `
   </div>
 `;
 class pCameraH5 {
-  #config: opt;
+  #config: CameraOptions;
   #mediaStream: MediaStream | null;
   #mediaRecorder: MediaRecorder | null;
   #recordedChunks: Blob[];
@@ -33,14 +36,14 @@ class pCameraH5 {
   #captureBtn: HTMLButtonElement | null;
   #recordBtn: HTMLButtonElement | null;
   #recordTimer: number | null;
-  #watermarkImage: HTMLImageElement | null;
   #loading: HTMLDivElement | null;
+  #recordTime: HTMLDivElement | null;
   #canvasCtx: CanvasRenderingContext2D | null;
   #canvasStream: MediaStream | null;
   #animationFrameId: number | null;
   #isWatermarkVisible = true;
 
-  constructor(options: opt) {
+  constructor(options: CameraOptions) {
     this.#config = {
       el: document.body,
       watermark: {
@@ -62,7 +65,7 @@ class pCameraH5 {
     this.#captureBtn = null;
     this.#recordBtn = null;
     this.#recordTimer = null;
-    this.#watermarkImage = null;
+    this.#recordTime = null;
     this.#loading = null;
     this.#canvasCtx = null;
     this.#canvasStream = null;
@@ -185,15 +188,13 @@ class pCameraH5 {
     let x = 10,
       y = 10;
 
-    if (horizontal === "right") x = ctx.canvas.width - 200;
-    if (vertical === "bottom") y = ctx.canvas.height - 30;
+    if (horizontal === "right") x = ctx.canvas.width - 100;
+    if (vertical === "bottom") y = ctx.canvas.height - 10;
 
     if (this.#config.watermark.text) {
       ctx.fillStyle = this.#config.watermark.color;
       ctx.font = `${this.#config.watermark.fontSize} sans-serif`;
       ctx.fillText(this.#config.watermark.text, x, y);
-    } else if (this.#watermarkImage) {
-      ctx.drawImage(this.#watermarkImage, x, y, 100, 30);
     }
   }
 
@@ -220,12 +221,19 @@ class pCameraH5 {
     this.#mediaRecorder.start();
 
     // Start timer
-    const timeElement = document.getElementById("p-record-time")!;
-    timeElement.style.display = "inline";
+    this.#recordTime = document.getElementById(
+      "p-record-time"
+    ) as HTMLDivElement;
+    this.#recordTime.style.display = "inline";
     let seconds = 0;
     this.#recordTimer = window.setInterval(() => {
       seconds++;
-      timeElement.textContent = `${Math.floor(seconds / 60)
+      if (!this.#recordTime) throw new Error("recordTime is required");
+      if (seconds >= 60) {
+        clearInterval(this.#recordTimer!);
+        this.#recordTime.textContent = "00:00";
+      }
+      this.#recordTime.textContent = `${Math.floor(seconds / 60)
         .toString()
         .padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
     }, 1000);
@@ -238,8 +246,11 @@ class pCameraH5 {
         resolve(URL.createObjectURL(blob));
 
         // Reset timer
-        clearInterval(this.#recordTimer!);
-        document.getElementById("p-record-time")!.style.display = "none";
+
+        if (!this.#recordTime || !this.#recordTimer)
+          throw new Error("recordTime is required");
+        clearInterval(this.#recordTimer);
+        this.#recordTime.textContent = "00:00";
       };
       this.#mediaRecorder?.stop();
     });
