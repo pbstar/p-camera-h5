@@ -11,8 +11,29 @@ type opt = {
 };
 const elTemplate = `
   <div id="p-camera-h5">
-    <video id="p-camera-h5-video" autoplay playsinline></video>
-    <div id="p-camera-h5-watermark" class="watermark"></div>
+    <div class="top">
+      <div class="tleft">
+      </div>
+      <div class="tcenter">
+      </div>
+      <div class="tright">
+        <button id="p-watermark-btn">关闭水印</button>
+      </div>
+    </div>
+    <div class="center">
+      <video id="p-video" autoplay playsinline></video>
+      <div id="p-watermark"></div>
+    </div>
+    <div class="bottom">
+      <div class="bleft">
+      </div>
+      <div class="bcenter">
+        <button id="p-capture-btn">拍照</button>
+        <button id="p-record-btn">录制</button>
+      </div>
+      <div class="bright">
+      </div>
+    </div>
   </div>
 `;
 class pCameraH5 {
@@ -22,6 +43,9 @@ class pCameraH5 {
   #recordedChunks: Blob[];
   #video: HTMLVideoElement | null;
   #watermark: HTMLDivElement | null;
+  #watermarkBtn: HTMLButtonElement | null;
+  #captureBtn: HTMLButtonElement | null;
+  #recordBtn: HTMLButtonElement | null;
   constructor(options: opt) {
     this.#config = {
       el: document.body,
@@ -42,11 +66,15 @@ class pCameraH5 {
     this.#recordedChunks = [];
     this.#video = null;
     this.#watermark = null;
+    this.#watermarkBtn = null;
+    this.#captureBtn = null;
+    this.#recordBtn = null;
     this.init();
   }
 
   async init() {
     this.setupUI();
+    this.setupBtns();
     await this.setupCamera();
     this.setupWatermark();
   }
@@ -59,12 +87,50 @@ class pCameraH5 {
     styleElement.innerHTML = JSON.stringify(style);
     this.#config.el.appendChild(styleElement);
   }
-
+  setupBtns() {
+    this.#watermarkBtn = document.getElementById(
+      "p-watermark-btn"
+    ) as HTMLButtonElement;
+    this.#captureBtn = document.getElementById(
+      "p-capture-btn"
+    ) as HTMLButtonElement;
+    this.#recordBtn = document.getElementById(
+      "p-record-btn"
+    ) as HTMLButtonElement;
+    if (!this.#captureBtn || !this.#recordBtn) {
+      throw new Error("captureBtn or recordBtn is not initialized");
+    }
+    if (!this.#watermarkBtn) {
+      throw new Error("watermarkBtn is not initialized");
+    }
+    this.#watermarkBtn.addEventListener("click", () => {
+      if (this.#watermark && this.#watermarkBtn) {
+        this.#watermark.style.display =
+          this.#watermark.style.display === "none" ? "block" : "none";
+        this.#watermarkBtn.textContent =
+          this.#watermark.style.display === "none" ? "打开水印" : "关闭水印";
+      }
+    });
+    this.#captureBtn.addEventListener("click", () => {
+      this.downloadRecording(this.capture(), "png");
+    });
+    this.#recordBtn.addEventListener("click", () => {
+      if (this.#recordBtn) {
+        if (this.#recordBtn.textContent === "录制") {
+          this.startRecording();
+          this.#recordBtn.textContent = "停止";
+        } else {
+          this.stopRecording().then((res:any) => {
+            this.downloadRecording(res, "mp4");
+          });
+          this.#recordBtn.textContent = "录制";
+        }
+      }
+    });
+  }
   async setupCamera() {
     try {
-      this.#video = document.getElementById(
-        "p-camera-h5-video"
-      ) as HTMLVideoElement;
+      this.#video = document.getElementById("p-video") as HTMLVideoElement;
       this.#mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
@@ -78,9 +144,7 @@ class pCameraH5 {
   setupWatermark() {
     if (!this.#config.watermark.text && !this.#config.watermark.image)
       throw new Error("watermark text or image is required");
-    this.#watermark = document.getElementById(
-      "p-camera-h5-watermark"
-    ) as HTMLDivElement;
+    this.#watermark = document.getElementById("p-watermark") as HTMLDivElement;
     if (!this.#watermark) throw new Error("watermark is not initialized");
     Object.assign(this.#watermark.style, {
       position: "absolute",
@@ -120,6 +184,7 @@ class pCameraH5 {
     this.#recordedChunks = [];
     const options = { mimeType: "video/webm" };
     if (!this.#mediaStream) throw new Error("mediaStream is not initialized");
+    debugger
     this.#mediaRecorder = new MediaRecorder(this.#mediaStream, options);
 
     this.#mediaRecorder.ondataavailable = (e) => {
@@ -139,6 +204,20 @@ class pCameraH5 {
       };
       this.#mediaRecorder.stop();
     });
+  }
+  downloadRecording(url: string, type: string) {
+    const a = document.createElement("a");
+    a.href = url;
+    if (type == "mp4") {
+      a.download = `recording-${Date.now()}.mp4`;
+    } else if (type == "webm") {
+      a.download = `recording-${Date.now()}.webm`;
+    } else if (type == "png") {
+      a.download = `recording-${Date.now()}.png`;
+    }
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   destroy() {

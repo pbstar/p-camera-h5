@@ -1,14 +1,56 @@
 #p-camera-h5 {
   width: 100%;
   height: 100%;
-  position: relative;
   background-color: #000;
+  display: flex;
+  flex-direction: column;
 }
-#p-camera-h5 video {
+#p-camera-h5 .top {
+  height: 60px;
+  width: 100%;
+}
+#p-camera-h5 .center {
+  width: 100%;
+  height: calc(100% - 60px - 120px);
+  position: relative;
+}
+#p-camera-h5 #p-video {
   width: 100%;
   height: 100%;
   position: absolute;
   top: 0;
   left: 0;
   object-fit: cover;
+}
+#p-camera-h5 #p-watermark {
+  position: absolute;
+}
+#p-camera-h5 .bottom {
+  height: 120px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+#p-camera-h5 .bottom .bleft,
+#p-camera-h5 .bottom .bright {
+  width: calc((100% - 200px) / 2);
+  height: 100%;
+}
+#p-camera-h5 .bottom .bcenter {
+  width: 200px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#p-camera-h5 #p-capture-btn,
+#p-camera-h5 #p-record-btn {
+  width: 80px;
+  height: 40px;
+  margin: 0 10px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  background-color: #fff;
 }
