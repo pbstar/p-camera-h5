@@ -14,6 +14,11 @@
   <script>
     const camera = new pCameraH5({
       el: document.querySelector('#el'),   // 容器选择器
+      style: `
+        #p-camera-h5 #p-record-time {
+          color: red;
+        }
+      `,                        // 自定义样式
       watermark: {             // 水印配置
         text: 'pCameraH5',      // 文字水印
         position: 'bottom-left', // 水印位置

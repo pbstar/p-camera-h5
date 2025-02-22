@@ -15,6 +15,7 @@ class pCameraH5 {
   constructor(options: CameraOptions) {
     this.#config = {
       el: null,
+      style: "", // 自定义样式
       watermark: {
         text: "pCameraH5",
         position: "bottom-left", // 支持 top-left, top-right, bottom-left, bottom-right
@@ -60,7 +61,9 @@ class pCameraH5 {
     this.#config.el.innerHTML = elTemplate;
     // 加载css样式
     const styleElement = document.createElement("style");
-    styleElement.innerHTML = Object.values(style).join("");
+    let styleStr = Object.values(style).join("");
+    if (this.#config.style) styleStr += this.#config.style;
+    styleElement.innerHTML = styleStr;
     this.#config.el.appendChild(styleElement);
   }
 

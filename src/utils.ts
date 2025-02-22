@@ -1,8 +1,8 @@
-export const downloadFile = (file: File) => {
+export const downloadFile = (file: File, name?: string) => {
   const a = document.createElement("a");
   const url = URL.createObjectURL(file);
   a.href = url;
-  a.download = file.name;
+  a.download = name ? name : file.name;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

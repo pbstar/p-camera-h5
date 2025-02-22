@@ -9,7 +9,8 @@ export type WatermarkConfig = {
 
 export type CameraOptions = {
   el: HTMLElement | null;
-  watermark: WatermarkConfig;
+  style?: string;
+  watermark?: WatermarkConfig;
 };
 
 export type Media = {
