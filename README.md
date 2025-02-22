@@ -5,9 +5,7 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/p-camera-h5?style=flat&color=41B883)](https://bundlephobia.com/package/p-camera-h5)
 [![Demo](https://img.shields.io/badge/在线示例-FF5722?style=flat)](https://pbstar.github.io/p-camera-h5-demo/)
 
-一款轻量级 H5 相机插件，支持拍照、录像、动态水印与高度定制化，适配现代浏览器，为 Web 应用提供原生级摄像头体验。
-
-![插件预览图](./src/assets/pCameraH5.png)
+一款轻量级 H5 相机插件，支持拍照、录像、动态水印与高度样式定制化，适配现代浏览器，为 Web 应用提供原生级摄像头体验。
 
 ---
 
@@ -53,7 +51,7 @@ const camera = new pCameraH5({
   el: document.getElementById("camera-container"),
   watermark: {
     text: "Powered by pCameraH5",
-    position: "bottom-right",
+    position: "bottom-left",
     color: "rgba(255, 255, 255, 0.8)",
     fontSize: "16px",
   },
@@ -108,6 +106,26 @@ camera.off("capture", handlePhoto);
 ```
 
 ---
+
+## 📝 样式自定义
+
+dom结构参考
+
+```html
+  <div id="p-camera-h5">
+    <div id="p-loading">加载中...</div>
+    <div id="p-error"></div>
+    <div id="p-container">
+      <video id="p-video" autoplay playsinline></video>
+      <canvas id="p-canvas" style="display:none;"></canvas>
+    </div>
+    <div id="p-watermark-btn">关闭水印</div>
+    <div id="p-capture-btn">拍照</div>
+    <div id="p-record-btn">录制</div>
+    <div id="p-record-time">00:00</div>
+  </div>
+```
+
 
 ## 🚨 重要说明
 
