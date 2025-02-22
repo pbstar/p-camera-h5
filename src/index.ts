@@ -1,89 +1,62 @@
+import { CameraOptions, Media, Btns } from "./types";
+import { elTemplate } from "./constants";
+import { setupCamera } from "./media";
+import { base64ToFile, blobToFile, downloadFile } from "./utils";
 import style from "./assets/style.css";
-type WatermarkConfig = {
-  text: string;
-  image?: string;
-  position: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  color: string;
-  fontSize: string;
-  margin?: number;
-};
 
-type CameraOptions = {
-  el: HTMLElement;
-  watermark: WatermarkConfig;
-};
-const elTemplate = `
-  <div id="p-camera-h5">
-    <div id="p-loading">加载中...</div>
-    <div id="p-error"></div>
-    <div id="p-container">
-      <video id="p-video" autoplay playsinline></video>
-      <canvas id="p-canvas" style="display:none;"></canvas>
-    </div>
-    <div id="p-watermark-btn">关闭水印</div>
-    <div id="p-capture-btn">拍照</div>
-    <div id="p-record-btn">录制</div>
-    <div id="p-record-time">00:00</div>
-  </div>
-`;
 class pCameraH5 {
   #config: CameraOptions;
-  #mediaStream: MediaStream | null;
-  #mediaRecorder: MediaRecorder | null;
-  #recordedChunks: Blob[];
-  #video: HTMLVideoElement | null;
-  #watermarkBtn: HTMLButtonElement | null;
-  #captureBtn: HTMLButtonElement | null;
-  #recordBtn: HTMLButtonElement | null;
-  #recordTimer: number | null;
-  #loading: HTMLDivElement | null;
-  #recordTime: HTMLDivElement | null;
-  #canvasCtx: CanvasRenderingContext2D | null;
-  #canvasStream: MediaStream | null;
-  #animationFrameId: number | null;
-  #isWatermarkVisible = true;
-
+  #media: Media | null;
+  #btns: Btns | null;
+  #watch: any; //camera,record
+  api: { [key: string]: Function };
+  on: (type: string, callback: Function) => void;
+  off: (type: string, callback: Function) => void;
   constructor(options: CameraOptions) {
     this.#config = {
-      el: document.body,
+      el: null,
       watermark: {
-        text: "",
-        image: "",
-        position: "bottom-right", // 支持 top-left, top-right, bottom-left, bottom-right
+        text: "pCameraH5",
+        position: "bottom-left", // 支持 top-left, top-right, bottom-left, bottom-right
         color: "rgba(255, 255, 255, 0.5)",
-        fontSize: "20px",
+        fontSize: "18px",
       },
     };
-    if (!options.el) throw new Error("el is required");
+    if (!options.el || options.el instanceof HTMLElement === false)
+      throw new Error("el is required");
     Object.assign(this.#config, options);
 
-    this.#mediaStream = null;
-    this.#mediaRecorder = null;
-    this.#recordedChunks = [];
-    this.#video = null;
-    this.#watermarkBtn = null;
-    this.#captureBtn = null;
-    this.#recordBtn = null;
-    this.#recordTimer = null;
-    this.#recordTime = null;
-    this.#loading = null;
-    this.#canvasCtx = null;
-    this.#canvasStream = null;
-    this.#animationFrameId = null;
-    this.#isWatermarkVisible = true;
+    this.#media = {};
+    this.#btns = {};
+    this.#watch = {};
     this.init();
+    this.api = {
+      init: this.init.bind(this),
+      capture: this.capture.bind(this),
+      startRecording: this.startRecording.bind(this),
+      stopRecording: this.stopRecording.bind(this),
+      destroy: this.destroy.bind(this),
+      downloadFile: downloadFile.bind(this),
+    };
+    this.on = (type: string, callback: Function) => {
+      this.#watch[type] = callback;
+    };
+    this.off = (type: string) => {
+      delete this.#watch[type];
+    };
   }
 
   async init() {
     this.#setupUI();
     this.#setupBtns();
-    await this.#setupCamera();
-    this.#loading = document.getElementById("p-loading") as HTMLDivElement;
-    this.#loading.style.display = "none";
+    await setupCamera(this.#media, this.#config);
+    const loading = document.getElementById("p-loading") as HTMLDivElement;
+    loading.style.display = "none";
   }
 
   #setupUI() {
     // 加载相机模板
+    if (!this.#config.el) throw new Error("el is required");
     this.#config.el.innerHTML = elTemplate;
     // 加载css样式
     const styleElement = document.createElement("style");
@@ -92,209 +65,147 @@ class pCameraH5 {
   }
 
   #setupBtns() {
-    this.#watermarkBtn = document.getElementById(
-      "p-watermark-btn"
-    ) as HTMLButtonElement;
-    this.#captureBtn = document.getElementById(
-      "p-capture-btn"
-    ) as HTMLButtonElement;
-    this.#recordBtn = document.getElementById(
-      "p-record-btn"
-    ) as HTMLButtonElement;
+    if (!this.#btns) this.#btns = {};
+    this.#btns.watermarkBtn = document.getElementById("p-watermark-btn");
+    this.#btns.captureBtn = document.getElementById("p-capture-btn");
+    this.#btns.recordBtn = document.getElementById("p-record-btn");
 
-    if (!this.#captureBtn || !this.#recordBtn)
+    if (
+      !this.#btns.watermarkBtn ||
+      !this.#btns.captureBtn ||
+      !this.#btns.recordBtn
+    )
       throw new Error("Buttons not initialized");
 
-    this.#watermarkBtn.addEventListener("click", () => this.toggleWatermark());
-    this.#captureBtn.addEventListener("click", () => this.handleCapture());
-    this.#recordBtn.addEventListener("click", () => this.handleRecording());
-  }
-
-  async #setupCamera() {
-    try {
-      this.#video = document.getElementById("p-video") as HTMLVideoElement;
-      const canvas = document.getElementById("p-canvas") as HTMLCanvasElement;
-
-      // 获取原始媒体流
-      this.#mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
-      // 初始化Canvas
-      this.#canvasCtx = canvas.getContext("2d");
-
-      // 创建带水印的视频流
-      this.#canvasStream = this.#createProcessedStream();
-
-      // 显示处理后的视频
-      this.#video.srcObject = this.#canvasStream;
-    } catch (error: any) {
-      throw new Error("Error accessing media devices: " + error.message);
-    }
-  }
-
-  #createProcessedStream(): MediaStream {
-    if (!this.#canvasCtx || !this.#mediaStream) throw new Error("初始化失败");
-    if (!this.#video) throw new Error("video is required");
-    const canvas = document.getElementById("p-canvas") as HTMLCanvasElement;
-    canvas.width = this.#video.clientWidth;
-    canvas.height = this.#video.clientHeight;
-    const processedStream = canvas.captureStream(30);
-    const audioTracks = this.#mediaStream.getAudioTracks();
-    if (audioTracks.length > 0) {
-      processedStream.addTrack(audioTracks[0]);
-    }
-
-    const videoElement = document.createElement("video");
-    videoElement.srcObject = new MediaStream(
-      this.#mediaStream.getVideoTracks()
+    this.#btns.watermarkBtn.addEventListener("click", () =>
+      this.handleWatermark()
     );
-    videoElement.onloadedmetadata = () => {
-      videoElement.play();
-      this.#drawVideoFrame(videoElement);
-    };
-
-    return processedStream;
-  }
-
-  #drawVideoFrame(video: HTMLVideoElement) {
-    if (!this.#canvasCtx || !this.#video) return;
-
-    const scaleRatio = Math.max(
-      this.#video.clientWidth / video.videoWidth,
-      this.#video.clientHeight / video.videoHeight
-    );
-
-    // 根据缩放比例计算绘制时的宽度和高度
-    const drawWidth = video.videoWidth * scaleRatio;
-    const drawHeight = video.videoHeight * scaleRatio;
-
-    // 计算图像在Canvas上的目标位置，使其居中
-    const x = (this.#video.clientWidth - drawWidth) / 2;
-    const y = (this.#video.clientHeight - drawHeight) / 2;
-
-    this.#canvasCtx.drawImage(video, x, y, drawWidth, drawHeight);
-    this.#drawWatermark(this.#canvasCtx);
-    this.#animationFrameId = requestAnimationFrame(() =>
-      this.#drawVideoFrame(video)
+    this.#btns.captureBtn.addEventListener("click", () => this.handleCapture());
+    this.#btns.recordBtn.addEventListener("click", () =>
+      this.handleRecording()
     );
   }
 
-  #drawWatermark(ctx: CanvasRenderingContext2D) {
-    if (!this.#isWatermarkVisible) return;
-
-    const [vertical, horizontal] = this.#config.watermark.position.split("-");
-    let x = 10,
-      y = 10;
-
-    if (horizontal === "right") x = ctx.canvas.width - 100;
-    if (vertical === "bottom") y = ctx.canvas.height - 10;
-
-    if (this.#config.watermark.text) {
-      ctx.fillStyle = this.#config.watermark.color;
-      ctx.font = `${this.#config.watermark.fontSize} sans-serif`;
-      ctx.fillText(this.#config.watermark.text, x, y);
-    }
-  }
-
-  // 修改后的capture方法
+  // 拍照
   capture() {
-    if (!this.#canvasCtx) throw new Error("Canvas未初始化");
-
+    if (!this.#media) throw new Error("Media is not initialized");
+    if (!this.#media.canvasCtx) throw new Error("Canvas未初始化");
+    if (!this.#media.video) throw new Error("Video未初始化");
     const canvas = document.createElement("canvas");
-    canvas.width = this.#video!.videoWidth;
-    canvas.height = this.#video!.videoHeight;
-    const ctx = canvas.getContext("2d")!;
-
-    // 直接复制已处理好的Canvas内容
-    ctx.drawImage(this.#canvasCtx.canvas, 0, 0);
-    return canvas.toDataURL("image/png");
+    canvas.width = this.#media.video.videoWidth;
+    canvas.height = this.#media.video.videoHeight;
+    const ctx: any = canvas.getContext("2d");
+    ctx.drawImage(this.#media.canvasCtx.canvas, 0, 0);
+    if (this.#watch && this.#watch["capture"])
+      this.#watch["capture"](
+        base64ToFile(canvas.toDataURL("image/png"), "png")
+      );
   }
-
+  // 开始录像
   startRecording() {
-    this.#recordedChunks = [];
-    this.#mediaRecorder = new MediaRecorder(this.#canvasStream!);
-
-    this.#mediaRecorder.ondataavailable = (e) =>
-      e.data.size > 0 && this.#recordedChunks.push(e.data);
-    this.#mediaRecorder.start();
+    if (!this.#media) throw new Error("Media is not initialized");
+    this.#media.recordedChunks = [];
+    if (!this.#media.canvasStream) throw new Error("canvasStream is required");
+    this.#media.mediaRecorder = new MediaRecorder(this.#media.canvasStream);
+    this.#media.mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        if (!this.#media) throw new Error("Media is not initialized");
+        if (!this.#media.recordedChunks) this.#media.recordedChunks = [];
+        this.#media.recordedChunks.push(e.data);
+      }
+    };
+    if (!this.#media.mediaRecorder)
+      throw new Error("mediaRecorder is required");
+    this.#media.mediaRecorder.start();
 
     // Start timer
-    this.#recordTime = document.getElementById(
-      "p-record-time"
-    ) as HTMLDivElement;
-    this.#recordTime.style.display = "inline";
+    this.#media.recordTime = document.getElementById("p-record-time");
+    if (!this.#media.recordTime) throw new Error("recordTime is required");
+    if (!this.#media.recordTime) throw new Error("recordTime is required");
+    this.#media.recordTime.style.display = "inline";
     let seconds = 0;
-    this.#recordTimer = window.setInterval(() => {
+    this.#media.recordTimer = window.setInterval(() => {
       seconds++;
-      if (!this.#recordTime) throw new Error("recordTime is required");
+      if (!this.#media) throw new Error("recordTime is required");
+      if (!this.#media.recordTime) throw new Error("recordTime is required");
       if (seconds >= 60) {
-        clearInterval(this.#recordTimer!);
-        this.#recordTime.textContent = "00:00";
+        this.stopRecording();
       }
-      this.#recordTime.textContent = `${Math.floor(seconds / 60)
+      this.#media.recordTime.textContent = `${Math.floor(seconds / 60)
         .toString()
         .padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
     }, 1000);
   }
-
+  // 停止录像
   async stopRecording() {
-    return new Promise((resolve) => {
-      this.#mediaRecorder!.onstop = () => {
-        const blob = new Blob(this.#recordedChunks, { type: "video/webm" });
-        resolve(URL.createObjectURL(blob));
-
-        // Reset timer
-
-        if (!this.#recordTime || !this.#recordTimer)
-          throw new Error("recordTime is required");
-        clearInterval(this.#recordTimer);
-        this.#recordTime.textContent = "00:00";
-      };
-      this.#mediaRecorder?.stop();
-    });
+    if (!this.#media) throw new Error("Media is not initialized");
+    if (!this.#media.mediaRecorder)
+      throw new Error("mediaRecorder is required");
+    this.#media.mediaRecorder.onstop = () => {
+      if (!this.#media) throw new Error("Media is not initialized");
+      const blob = new Blob(this.#media.recordedChunks, {
+        type: "video/webm",
+      });
+      if (this.#watch && this.#watch["record"])
+        this.#watch["record"](blobToFile(blob, "mp4"));
+      if (!this.#media.recordTime || !this.#media.recordTimer)
+        throw new Error("recordTime is required");
+      clearInterval(this.#media.recordTimer);
+      this.#media.recordTime.textContent = "00:00";
+    };
+    this.#media.mediaRecorder.stop();
   }
 
-  toggleWatermark() {
-    if (!this.#watermarkBtn) return;
-    this.#isWatermarkVisible = !this.#isWatermarkVisible;
-    this.#watermarkBtn!.textContent = this.#isWatermarkVisible
+  handleWatermark() {
+    if (!this.#media) throw new Error("media is required");
+    if (!this.#btns) throw new Error("btns is required");
+    if (!this.#btns.watermarkBtn) throw new Error("watermarkBtn is required");
+    if (
+      this.#media.isWatermarkVisible === null ||
+      this.#media.isWatermarkVisible === undefined
+    ) {
+      this.#media.isWatermarkVisible = true;
+    }
+    this.#media.isWatermarkVisible = !this.#media.isWatermarkVisible;
+    this.#btns.watermarkBtn.textContent = this.#media.isWatermarkVisible
       ? "关闭水印"
       : "打开水印";
   }
 
   handleCapture() {
-    this.#downloadRecording(this.capture(), "png");
+    this.capture();
   }
 
   async handleRecording() {
-    if (this.#recordBtn?.textContent === "录制") {
+    if (!this.#btns) throw new Error("btns is required");
+    if (!this.#btns.recordBtn) throw new Error("recordBtn is required");
+    if (this.#btns.recordBtn.textContent === "录制") {
       this.startRecording();
-      this.#recordBtn.textContent = "停止";
+      this.#btns.recordBtn.textContent = "停止";
     } else {
-      const url = await this.stopRecording();
-      this.#downloadRecording(url as string, "webm");
-      this.#recordBtn!.textContent = "录制";
+      await this.stopRecording();
+      this.#btns.recordBtn.textContent = "录制";
     }
-  }
-
-  #downloadRecording(url: string, type: "png" | "webm") {
-    const ext = type === "png" ? "png" : "mp4";
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `recording-${Date.now()}.${ext}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   }
 
   destroy() {
-    if (this.#animationFrameId) {
-      cancelAnimationFrame(this.#animationFrameId);
+    if (!this.#media) throw new Error("media is required");
+    if (!this.#config) throw new Error("config is required");
+    if (!this.#config.el) throw new Error("el is required");
+    if (this.#media.animationFrameId) {
+      cancelAnimationFrame(this.#media.animationFrameId);
     }
-    this.#mediaStream?.getTracks().forEach((track) => track.stop());
+    if (!this.#media.mediaStream) throw new Error("mediaStream is required");
+    this.#media.mediaStream.getTracks().forEach((track: any) => track.stop());
     this.#config.el.innerHTML = "";
+    if (this.#btns) {
+      this.#btns.watermarkBtn?.removeEventListener(
+        "click",
+        this.handleWatermark
+      );
+      this.#btns.captureBtn?.removeEventListener("click", this.handleCapture);
+      this.#btns.recordBtn?.removeEventListener("click", this.handleRecording);
+    }
   }
 }
 

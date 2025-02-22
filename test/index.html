@@ -21,8 +21,12 @@
         fontSize: '18px'       // 文字大小
       },
     });
-    console.log(camera);
-
+    camera.on('capture', (res) => {
+      camera.api.downloadFile(res);
+    });
+    camera.on('record', (res) => {
+      camera.api.downloadFile(res);
+    });
   </script>
 </body>
 
