@@ -77,11 +77,12 @@ export const setupCamera = async (media: any, config: any) => {
   try {
     media.video = document.getElementById("p-video");
     const canvas: any = document.getElementById("p-canvas");
-
+    let facingMode = "environment";
+    if (config.facingMode) facingMode = config.facingMode;
     // 获取原始媒体流
     media.mediaStream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: "user",
+        facingMode,
       },
       audio: true,
     });

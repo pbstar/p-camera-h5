@@ -15,6 +15,7 @@ class pCameraH5 {
   constructor(options: CameraOptions) {
     this.#config = {
       el: null,
+      facingMode: "environment",// "user" | "environment"
       style: "", // 自定义样式
       watermark: {
         visible: false,
