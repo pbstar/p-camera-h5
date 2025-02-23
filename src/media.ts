@@ -1,6 +1,7 @@
-const createProcessedStream = (media: any, config: any) => {
-  if (!media.canvasCtx || !media.mediaStream) throw new Error("初始化失败");
-  if (!media.video) throw new Error("video is required");
+import { error } from "./utils";
+const createProcessedStream = (media: any, config: any, err: any) => {
+  if (!media.canvasCtx || !media.mediaStream) return error(err, "初始化失败");
+  if (!media.video) return error(err, "video is required");
   const canvas = document.getElementById("p-canvas") as HTMLCanvasElement;
   canvas.width = media.video.clientWidth;
   canvas.height = media.video.clientHeight;
@@ -14,12 +15,12 @@ const createProcessedStream = (media: any, config: any) => {
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
   videoElement.onloadedmetadata = () => {
     videoElement.play();
-    drawVideoFrame(videoElement, media, config);
+    drawVideoFrame(videoElement, media, config, err);
   };
 
   return processedStream;
 };
-const drawVideoFrame = (v: any, media: any, config: any) => {
+const drawVideoFrame = (v: any, media: any, config: any, err: any) => {
   if (!media.canvasCtx || !media.video) return;
 
   const scaleRatio = Math.max(
@@ -36,16 +37,16 @@ const drawVideoFrame = (v: any, media: any, config: any) => {
   const y = (media.video.clientHeight - drawHeight) / 2;
 
   media.canvasCtx.drawImage(v, x, y, drawWidth, drawHeight);
-  drawWatermark(media, config);
+  drawWatermark(media, config, err);
   media.animationFrameId = requestAnimationFrame(() =>
-    drawVideoFrame(v, media, config)
+    drawVideoFrame(v, media, config, err)
   );
 };
-const drawWatermark = (media: any, config: any) => {
+const drawWatermark = (media: any, config: any, err: any) => {
   if (media.isWatermarkVisible === false) return;
   if (config.watermark.visible === false) return;
 
-  if (!media.canvasCtx.canvas) throw new Error("Canvas is not initialized");
+  if (!media.canvasCtx.canvas) return error(err, "Canvas is not initialized");
   let x = 10,
     y = 10;
   if (config.watermark.x) x = config.watermark.x;
@@ -73,7 +74,7 @@ const drawWatermark = (media: any, config: any) => {
     );
   }
 };
-export const setupCamera = async (media: any, config: any) => {
+export const setupCamera = async (media: any, config: any, err: any) => {
   try {
     media.video = document.getElementById("p-video");
     const canvas: any = document.getElementById("p-canvas");
@@ -93,7 +94,10 @@ export const setupCamera = async (media: any, config: any) => {
     // 处理水印图片
     if (config.watermark.visible && config.watermark.image) {
       const img = new Image();
-      img.src = config.watermark.image.url;
+      img.src =
+        config.watermark.image.url +
+        "?r=" +
+        Math.random().toString(36).substr(2);
       img.width = config.watermark.image.width || 100;
       img.height = config.watermark.image.height || 100;
       img.crossOrigin = "Anonymous";
@@ -106,13 +110,11 @@ export const setupCamera = async (media: any, config: any) => {
       });
       config.watermark.image.element = img;
     }
-
     // 创建带水印的视频流
-    media.canvasStream = createProcessedStream(media, config);
-
+    media.canvasStream = createProcessedStream(media, config, err);
     // 显示处理后的视频
     media.video.srcObject = media.canvasStream;
-  } catch (error: any) {
-    throw new Error("Error accessing media devices: " + error.message);
+  } catch (e: any) {
+    return error(err, "Error accessing media devices: " + e.message);
   }
 };

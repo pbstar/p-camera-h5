@@ -63,3 +63,8 @@ export const deepMerge = (...sources: any[]) => {
 
   return result;
 };
+export const error = (error: any, text: any) => {
+  error.textContent = text;
+  error.style.display = "block";
+  throw new Error(text);
+};

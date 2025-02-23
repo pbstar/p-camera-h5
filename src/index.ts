@@ -1,7 +1,13 @@
 import { CameraOptions, Media, Btns } from "./types";
 import { elTemplate } from "./constants";
 import { setupCamera } from "./media";
-import { base64ToFile, blobToFile, downloadFile, deepMerge } from "./utils";
+import {
+  base64ToFile,
+  blobToFile,
+  downloadFile,
+  deepMerge,
+  error,
+} from "./utils";
 import style from "./assets/style.css";
 
 class pCameraH5 {
@@ -9,23 +15,23 @@ class pCameraH5 {
   #media: Media | null;
   #btns: Btns | null;
   #watch: any; //camera,record
+  #error: any;
   api: { [key: string]: Function };
   on: (type: string, callback: Function) => void;
   off: (type: string, callback: Function) => void;
   constructor(options: CameraOptions) {
     this.#config = {
       el: null,
-      facingMode: "environment",// "user" | "environment"
+      facingMode: "environment", // "user" | "environment"
       style: "", // 自定义样式
       watermark: {
         visible: false,
       },
     };
-    if (!options.el || options.el instanceof HTMLElement === false)
-      throw new Error("el is required");
+
     //深度合并配置，包括二级属性
     this.#config = deepMerge(this.#config, options);
-
+    this.#error = null;
     this.#media = {};
     this.#btns = {};
     this.#watch = {};
@@ -49,15 +55,18 @@ class pCameraH5 {
   async init() {
     this.#setupUI();
     this.#setupBtns();
-    await setupCamera(this.#media, this.#config);
+    document.title = `Video Capture0`;
+    await setupCamera(this.#media, this.#config, this.#error);
     const loading = document.getElementById("p-loading") as HTMLDivElement;
     loading.style.display = "none";
   }
 
   #setupUI() {
     // 加载相机模板
-    if (!this.#config.el) throw new Error("el is required");
+    if (!this.#config.el) return console.error("el is required");
     this.#config.el.innerHTML = elTemplate;
+
+    this.#error = document.getElementById("p-error") as HTMLDivElement;
     // 加载css样式
     const styleElement = document.createElement("style");
     let styleStr = Object.values(style).join("");
@@ -77,7 +86,7 @@ class pCameraH5 {
       !this.#btns.captureBtn ||
       !this.#btns.recordBtn
     )
-      throw new Error("Buttons not initialized");
+      return error(this.#error, "Buttons not initialized");
 
     if (this.#config.watermark && this.#config.watermark.visible) {
       this.#btns.watermarkBtn.addEventListener("click", () =>
@@ -95,9 +104,9 @@ class pCameraH5 {
 
   // 拍照
   capture() {
-    if (!this.#media) throw new Error("Media is not initialized");
-    if (!this.#media.canvasCtx) throw new Error("Canvas未初始化");
-    if (!this.#media.video) throw new Error("Video未初始化");
+    if (!this.#media) return error(this.#error, "Media is not initialized");
+    if (!this.#media.canvasCtx) return error(this.#error, "Canvas未初始化");
+    if (!this.#media.video) return error(this.#error, "Video未初始化");
     const canvas = document.createElement("canvas");
     canvas.width = this.#media.video.videoWidth;
     canvas.height = this.#media.video.videoHeight;
@@ -110,31 +119,35 @@ class pCameraH5 {
   }
   // 开始录像
   startRecording() {
-    if (!this.#media) throw new Error("Media is not initialized");
+    if (!this.#media) return error(this.#error, "Media is not initialized");
     this.#media.recordedChunks = [];
-    if (!this.#media.canvasStream) throw new Error("canvasStream is required");
+    if (!this.#media.canvasStream)
+      return error(this.#error, "canvasStream is required");
     this.#media.mediaRecorder = new MediaRecorder(this.#media.canvasStream);
     this.#media.mediaRecorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) {
-        if (!this.#media) throw new Error("Media is not initialized");
+        if (!this.#media) return error(this.#error, "Media is not initialized");
         if (!this.#media.recordedChunks) this.#media.recordedChunks = [];
         this.#media.recordedChunks.push(e.data);
       }
     };
     if (!this.#media.mediaRecorder)
-      throw new Error("mediaRecorder is required");
+      return error(this.#error, "mediaRecorder is required");
     this.#media.mediaRecorder.start();
 
     // Start timer
     this.#media.recordTime = document.getElementById("p-record-time");
-    if (!this.#media.recordTime) throw new Error("recordTime is required");
-    if (!this.#media.recordTime) throw new Error("recordTime is required");
+    if (!this.#media.recordTime)
+      return error(this.#error, "recordTime is required");
+    if (!this.#media.recordTime)
+      return error(this.#error, "recordTime is required");
     this.#media.recordTime.style.display = "inline";
     let seconds = 0;
     this.#media.recordTimer = window.setInterval(() => {
       seconds++;
-      if (!this.#media) throw new Error("recordTime is required");
-      if (!this.#media.recordTime) throw new Error("recordTime is required");
+      if (!this.#media) return error(this.#error, "recordTime is required");
+      if (!this.#media.recordTime)
+        return error(this.#error, "recordTime is required");
       if (seconds >= 60) {
         this.stopRecording();
       }
@@ -145,18 +158,18 @@ class pCameraH5 {
   }
   // 停止录像
   async stopRecording() {
-    if (!this.#media) throw new Error("Media is not initialized");
+    if (!this.#media) return error(this.#error, "Media is not initialized");
     if (!this.#media.mediaRecorder)
-      throw new Error("mediaRecorder is required");
+      return error(this.#error, "mediaRecorder is required");
     this.#media.mediaRecorder.onstop = () => {
-      if (!this.#media) throw new Error("Media is not initialized");
+      if (!this.#media) return error(this.#error, "Media is not initialized");
       const blob = new Blob(this.#media.recordedChunks, {
         type: "video/webm",
       });
       if (this.#watch && this.#watch["record"])
         this.#watch["record"](blobToFile(blob, "mp4"));
       if (!this.#media.recordTime || !this.#media.recordTimer)
-        throw new Error("recordTime is required");
+        return error(this.#error, "recordTime is required");
       clearInterval(this.#media.recordTimer);
       this.#media.recordTime.textContent = "00:00";
     };
@@ -164,9 +177,10 @@ class pCameraH5 {
   }
 
   handleWatermark() {
-    if (!this.#media) throw new Error("media is required");
-    if (!this.#btns) throw new Error("btns is required");
-    if (!this.#btns.watermarkBtn) throw new Error("watermarkBtn is required");
+    if (!this.#media) return error(this.#error, "media is required");
+    if (!this.#btns) return error(this.#error, "btns is required");
+    if (!this.#btns.watermarkBtn)
+      return error(this.#error, "watermarkBtn is required");
     if (
       this.#media.isWatermarkVisible === null ||
       this.#media.isWatermarkVisible === undefined
@@ -184,8 +198,9 @@ class pCameraH5 {
   }
 
   async handleRecording() {
-    if (!this.#btns) throw new Error("btns is required");
-    if (!this.#btns.recordBtn) throw new Error("recordBtn is required");
+    if (!this.#btns) return error(this.#error, "btns is required");
+    if (!this.#btns.recordBtn)
+      return error(this.#error, "recordBtn is required");
     if (this.#btns.recordBtn.textContent === "录制") {
       this.startRecording();
       this.#btns.recordBtn.textContent = "停止";
@@ -196,13 +211,14 @@ class pCameraH5 {
   }
 
   destroy() {
-    if (!this.#media) throw new Error("media is required");
-    if (!this.#config) throw new Error("config is required");
-    if (!this.#config.el) throw new Error("el is required");
+    if (!this.#media) return error(this.#error, "media is required");
+    if (!this.#config) return error(this.#error, "config is required");
+    if (!this.#config.el) return error(this.#error, "el is required");
     if (this.#media.animationFrameId) {
       cancelAnimationFrame(this.#media.animationFrameId);
     }
-    if (!this.#media.mediaStream) throw new Error("mediaStream is required");
+    if (!this.#media.mediaStream)
+      return error(this.#error, "mediaStream is required");
     this.#media.mediaStream.getTracks().forEach((track: any) => track.stop());
     this.#config.el.innerHTML = "";
     if (this.#btns) {
