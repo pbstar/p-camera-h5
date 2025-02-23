@@ -1,10 +1,19 @@
-export type WatermarkConfig = {
-  text: string;
-  image?: string;
-  position: "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  color: string;
-  fontSize: string;
-  margin?: number;
+type WatermarkText = {
+  text?: string;
+  color?: string;
+  fontSize?: string;
+};
+type WatermarkImage = {
+  url?: string;
+  width?: number;
+  height?: number;
+};
+type WatermarkConfig = {
+  visible?: boolean;
+  x?: number;
+  y?: number;
+  text?: WatermarkText;
+  image?: WatermarkImage;
 };
 
 export type CameraOptions = {

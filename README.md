@@ -5,7 +5,7 @@
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/p-camera-h5?style=flat&color=41B883)](https://bundlephobia.com/package/p-camera-h5)
 [![Demo](https://img.shields.io/badge/在线示例-FF5722?style=flat)](https://pbstar.github.io/p-camera-h5-demo/)
 
-一款轻量级 H5 相机插件，支持拍照、录像、动态水印与高度样式定制化，适配现代浏览器，为 Web 应用提供原生级摄像头体验。
+一款轻量级 H5 相机插件，支持拍照、录像、文字图片水印与高度样式定制化，适配现代浏览器，为 Web 应用提供原生级摄像头体验。
 
 ---
 
@@ -41,19 +41,33 @@ npm install p-camera-h5 --save
 ## 🚀 快速接入
 
 ```html
-<div id="camera-container" style="width: 300px; height: 500px"></div>
+<div id="el" style="width: 300px; height: 500px"></div>
 ```
 
 ```javascript
 import pCameraH5 from "p-camera-h5";
 
 const camera = new pCameraH5({
-  el: document.getElementById("camera-container"),
+  el: document.querySelector("#el"), // 容器选择器
+  style: `
+    #p-camera-h5 #p-record-time {
+      color: rgba(255, 255, 255, 0.9);
+    }
+  `, // 自定义样式
   watermark: {
-    text: "Powered by pCameraH5",
-    position: "bottom-left",
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: "16px",
+    visible: true,
+    x: 10,
+    y: 290,
+    image: {
+      url: "https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg", // 水印图片地址
+      width: 50,
+      height: 50,
+    }, // 图片水印
+    // text:{
+    //   text: 'pCameraH5',
+    //   color: 'rgba(255, 255, 255, 0.5)',
+    //   fontSize: '18px',
+    // } // 文字水印
   },
 });
 
@@ -73,24 +87,24 @@ camera.on("record", (file) => {
 
 ## ⚙️ 配置项
 
-| 参数        | 类型        | 默认值                                                                                             | 说明                  |
-| ----------- | ----------- | -------------------------------------------------------------------------------------------------- | --------------------- |
-| `el`        | HTMLElement | **必填**                                                                                           | 挂载容器元素          |
-| `style`     | string      | `""`                                                                                               | 自定义 CSS 样式字符串 |
-| `watermark` | object      | `{ text: "pCameraH5", position: "bottom-left", color: "rgba(255,255,255,0.5)", fontSize: "18px" }` | 水印配置对象          |
+| 参数        | 类型        | 默认值                                                                         | 说明                  |
+| ----------- | ----------- | ------------------------------------------------------------------------------ | --------------------- |
+| `el`        | HTMLElement | **必填**                                                                       | 挂载容器元素          |
+| `style`     | string      | `""`                                                                           | 自定义 CSS 样式字符串 |
+| `watermark` | object      | `{ visible: true, x: 10, y: 290,text:{ text: 'pCameraH5', fontSize: '18px' }}` | 水印配置对象          |
 
 ---
 
 ## 📚 API 方法
 
-| 方法               | 说明                 | 示例                        |
-| ------------------ | -------------------- | --------------------------- |
-| `init()`           | 初始化摄像头         | `camera.init()`             |
-| `capture()`        | 拍摄照片             | `camera.capture()`          |
-| `startRecording()` | 开始录像             | `camera.startRecording()`   |
-| `stopRecording()`  | 停止录像             | `camera.stopRecording()`    |
-| `destroy()`        | 销毁实例（释放资源） | `camera.destroy()`          |
-| `downloadFile()`   | 下载文件             | `camera.downloadFile(file)` |
+| 方法               | 说明                 | 示例                            |
+| ------------------ | -------------------- | ------------------------------- |
+| `init()`           | 初始化摄像头         | `camera.api.init()`             |
+| `capture()`        | 拍摄照片             | `camera.api.capture()`          |
+| `startRecording()` | 开始录像             | `camera.api.startRecording()`   |
+| `stopRecording()`  | 停止录像             | `camera.api.stopRecording()`    |
+| `destroy()`        | 销毁实例（释放资源） | `camera.api.destroy()`          |
+| `downloadFile()`   | 下载文件             | `camera.api.downloadFile(file)` |
 
 ---
 
@@ -109,23 +123,117 @@ camera.off("capture", handlePhoto);
 
 ## 📝 样式自定义
 
-dom结构参考
+dom 结构参考
 
 ```html
-  <div id="p-camera-h5">
-    <div id="p-loading">加载中...</div>
-    <div id="p-error"></div>
-    <div id="p-container">
-      <video id="p-video" autoplay playsinline></video>
-      <canvas id="p-canvas" style="display:none;"></canvas>
-    </div>
-    <div id="p-watermark-btn">关闭水印</div>
-    <div id="p-capture-btn">拍照</div>
-    <div id="p-record-btn">录制</div>
-    <div id="p-record-time">00:00</div>
+<div id="p-camera-h5">
+  <div id="p-loading">加载中...</div>
+  <div id="p-error"></div>
+  <div id="p-container">
+    <video id="p-video" autoplay playsinline></video>
+    <canvas id="p-canvas" style="display:none;"></canvas>
   </div>
+  <div id="p-watermark-btn">关闭水印</div>
+  <div id="p-capture-btn">拍照</div>
+  <div id="p-record-btn">录制</div>
+  <div id="p-record-time">00:00</div>
+</div>
 ```
 
+默认样式参考
+
+```css
+#p-camera-h5 {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  position: relative;
+}
+#p-camera-h5 div {
+  box-sizing: border-box;
+}
+#p-camera-h5 #p-loading {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #000;
+  color: #fff;
+  line-height: 100px;
+  text-align: center;
+  font-size: 20px;
+  z-index: 200;
+}
+
+#p-camera-h5 #p-container {
+  width: 100%;
+  height: calc(100% - 150px);
+  position: absolute;
+  top: 50px;
+  left: 0;
+}
+#p-camera-h5 #p-video {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  object-fit: cover;
+}
+#p-camera-h5 #p-canvas {
+  width: 100%;
+  height: 100%;
+}
+#p-camera-h5 #p-capture-btn,
+#p-camera-h5 #p-record-btn {
+  width: 80px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  background-color: #fff;
+}
+#p-camera-h5 #p-capture-btn {
+  position: absolute;
+  bottom: 30px;
+  left: calc(50% - 90px);
+}
+#p-camera-h5 #p-record-btn {
+  position: absolute;
+  bottom: 30px;
+  left: calc(50% + 10px);
+}
+#p-camera-h5 #p-watermark-btn {
+  position: absolute;
+  top: 15px;
+  right: 10px;
+  z-index: 100;
+  width: 60px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 5px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  background-color: #fff;
+  font-size: 12px;
+}
+#p-camera-h5 #p-record-time {
+  width: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0;
+  line-height: 50px;
+  color: white;
+  font-size: 18px;
+  text-align: center;
+}
+```
 
 ## 🚨 重要说明
 
@@ -133,18 +241,7 @@ dom结构参考
    需在 HTTPS 环境或 localhost 下运行（浏览器安全策略要求）
 2. **权限管理**  
    首次使用需用户授权摄像头和麦克风权限
-
-3. **移动端优化**  
-   推荐添加 viewport 元标签以禁用缩放：
-
-   ```html
-   <meta
-     name="viewport"
-     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-   />
-   ```
-
-4. **格式说明**  
+3. **格式说明**  
    录像实际输出为 WEBM 格式，MP4 下载通过自动转换实现
 
 ---

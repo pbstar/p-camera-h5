@@ -16,14 +16,23 @@
       el: document.querySelector('#el'),   // 容器选择器
       style: `
         #p-camera-h5 #p-record-time {
-          color: red;
+          color: rgba(255, 255, 255, 0.9);
         }
       `,                        // 自定义样式
-      watermark: {             // 水印配置
-        text: 'pCameraH5',      // 文字水印
-        position: 'bottom-left', // 水印位置
-        color: 'rgba(255, 255, 255, 0.5)', // 文字颜色
-        fontSize: '18px'       // 文字大小
+      watermark: {
+        visible: true,
+        x: 10,
+        y: 290,
+        image: {
+          url: 'https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg', // 水印图片地址
+          width: 50,
+          height: 50,
+        }, // 图片水印
+        // text:{
+        //   text: 'pCameraH5',
+        //   color: 'rgba(255, 255, 255, 0.5)',
+        //   fontSize: '18px',
+        // } // 文字水印
       },
     });
     camera.on('capture', (res) => {

@@ -1,7 +1,7 @@
 import { CameraOptions, Media, Btns } from "./types";
 import { elTemplate } from "./constants";
 import { setupCamera } from "./media";
-import { base64ToFile, blobToFile, downloadFile } from "./utils";
+import { base64ToFile, blobToFile, downloadFile, deepMerge } from "./utils";
 import style from "./assets/style.css";
 
 class pCameraH5 {
@@ -17,15 +17,13 @@ class pCameraH5 {
       el: null,
       style: "", // 自定义样式
       watermark: {
-        text: "pCameraH5",
-        position: "bottom-left", // 支持 top-left, top-right, bottom-left, bottom-right
-        color: "rgba(255, 255, 255, 0.5)",
-        fontSize: "18px",
+        visible: false,
       },
     };
     if (!options.el || options.el instanceof HTMLElement === false)
       throw new Error("el is required");
-    Object.assign(this.#config, options);
+    //深度合并配置，包括二级属性
+    this.#config = deepMerge(this.#config, options);
 
     this.#media = {};
     this.#btns = {};
@@ -80,9 +78,14 @@ class pCameraH5 {
     )
       throw new Error("Buttons not initialized");
 
-    this.#btns.watermarkBtn.addEventListener("click", () =>
-      this.handleWatermark()
-    );
+    if (this.#config.watermark && this.#config.watermark.visible) {
+      this.#btns.watermarkBtn.addEventListener("click", () =>
+        this.handleWatermark()
+      );
+    } else {
+      this.#btns.watermarkBtn.style.display = "none";
+    }
+
     this.#btns.captureBtn.addEventListener("click", () => this.handleCapture());
     this.#btns.recordBtn.addEventListener("click", () =>
       this.handleRecording()
@@ -202,10 +205,12 @@ class pCameraH5 {
     this.#media.mediaStream.getTracks().forEach((track: any) => track.stop());
     this.#config.el.innerHTML = "";
     if (this.#btns) {
-      this.#btns.watermarkBtn?.removeEventListener(
-        "click",
-        this.handleWatermark
-      );
+      if (this.#config.watermark && this.#config.watermark.visible) {
+        this.#btns.watermarkBtn?.removeEventListener(
+          "click",
+          this.handleWatermark
+        );
+      }
       this.#btns.captureBtn?.removeEventListener("click", this.handleCapture);
       this.#btns.recordBtn?.removeEventListener("click", this.handleRecording);
     }

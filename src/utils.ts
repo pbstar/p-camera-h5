@@ -25,3 +25,41 @@ export const blobToFile = (blob: Blob, ext: string) => {
     type: blob.type,
   });
 };
+export const deepMerge = (...sources: any[]) => {
+  const result: any = {};
+
+  function isPlainObject(item: any) {
+    return (
+      item !== null &&
+      typeof item === "object" &&
+      Object.prototype.toString.call(item) === "[object Object]"
+    );
+  }
+
+  sources.forEach((source) => {
+    if (isPlainObject(source)) {
+      for (const key in source) {
+        if (source.hasOwnProperty(key)) {
+          const sourceValue = source[key];
+          const targetValue = result[key];
+
+          if (isPlainObject(sourceValue)) {
+            // 递归合并子对象
+            if (!isPlainObject(targetValue)) {
+              result[key] = {};
+            }
+            result[key] = deepMerge(targetValue, sourceValue);
+          } else if (Array.isArray(sourceValue)) {
+            // 数组处理：直接覆盖（可根据需求改为合并）
+            result[key] = [...sourceValue];
+          } else {
+            // 基础类型或其他对象（如 Date）直接赋值
+            result[key] = sourceValue;
+          }
+        }
+      }
+    }
+  });
+
+  return result;
+};

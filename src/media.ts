@@ -43,18 +43,34 @@ const drawVideoFrame = (v: any, media: any, config: any) => {
 };
 const drawWatermark = (media: any, config: any) => {
   if (media.isWatermarkVisible === false) return;
+  if (config.watermark.visible === false) return;
+
   if (!media.canvasCtx.canvas) throw new Error("Canvas is not initialized");
-  const [vertical, horizontal] = config.watermark.position.split("-");
   let x = 10,
-    y = 25;
-
-  if (horizontal === "right") x = media.canvasCtx.canvas.width - 100;
-  if (vertical === "bottom") y = media.canvasCtx.canvas.height - 10;
-
+    y = 10;
+  if (config.watermark.x) x = config.watermark.x;
+  if (config.watermark.y) y = config.watermark.y;
   if (config.watermark.text) {
-    media.canvasCtx.fillStyle = config.watermark.color;
-    media.canvasCtx.font = `${config.watermark.fontSize} sans-serif`;
-    media.canvasCtx.fillText(config.watermark.text, x, y);
+    let fontSize = "20px";
+    if (config.watermark.text.color)
+      media.canvasCtx.fillStyle = config.watermark.text.color;
+    if (config.watermark.text.fontSize)
+      fontSize = config.watermark.text.fontSize;
+    media.canvasCtx.font = `${fontSize} sans-serif`;
+    media.canvasCtx.fillText(config.watermark.text.text, x, y);
+  }
+  if (config.watermark.image) {
+    let width = 100,
+      height = 100;
+    if (config.watermark.image.width) width = config.watermark.image.width;
+    if (config.watermark.image.height) height = config.watermark.image.height;
+    media.canvasCtx.drawImage(
+      config.watermark.image.element,
+      x,
+      y,
+      width,
+      height
+    );
   }
 };
 export const setupCamera = async (media: any, config: any) => {
@@ -64,12 +80,31 @@ export const setupCamera = async (media: any, config: any) => {
 
     // 获取原始媒体流
     media.mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+      video: {
+        facingMode: "user",
+      },
       audio: true,
     });
 
     // 初始化Canvas
     media.canvasCtx = canvas.getContext("2d");
+
+    // 处理水印图片
+    if (config.watermark.visible && config.watermark.image) {
+      const img = new Image();
+      img.src = config.watermark.image.url;
+      img.width = config.watermark.image.width || 100;
+      img.height = config.watermark.image.height || 100;
+      img.crossOrigin = "Anonymous";
+      // contain
+      img.style.objectFit = "contain";
+      //允许重定向
+      img.referrerPolicy = "no-referrer";
+      await new Promise((resolve) => {
+        img.onload = () => resolve(img);
+      });
+      config.watermark.image.element = img;
+    }
 
     // 创建带水印的视频流
     media.canvasStream = createProcessedStream(media, config);
