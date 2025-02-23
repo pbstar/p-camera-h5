@@ -55,7 +55,6 @@ class pCameraH5 {
   async init() {
     this.#setupUI();
     this.#setupBtns();
-    document.title = `Video Capture0`;
     await setupCamera(this.#media, this.#config, this.#error);
     const loading = document.getElementById("p-loading") as HTMLDivElement;
     loading.style.display = "none";

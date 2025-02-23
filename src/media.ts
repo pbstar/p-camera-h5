@@ -107,6 +107,10 @@ export const setupCamera = async (media: any, config: any, err: any) => {
       img.referrerPolicy = "no-referrer";
       await new Promise((resolve) => {
         img.onload = () => resolve(img);
+        img.onerror = () => {
+          error(err, "Error accessing media devices: watermark image load error");
+          return resolve(img);
+        };
       });
       config.watermark.image.element = img;
     }

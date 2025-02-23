@@ -58,16 +58,11 @@ const camera = new pCameraH5({
     visible: true,
     x: 10,
     y: 290,
-    image: {
-      url: "https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg", // 水印图片地址
-      width: 50,
-      height: 50,
-    }, // 图片水印
-    // text:{
-    //   text: 'pCameraH5',
-    //   color: 'rgba(255, 255, 255, 0.5)',
-    //   fontSize: '18px',
-    // } // 文字水印
+    text: {
+      text: "pCameraH5",
+      color: "rgba(255, 255, 255, 0.5)",
+      fontSize: "18px",
+    }, // 文字水印
   },
 });
 
@@ -153,7 +148,8 @@ dom 结构参考
 #p-camera-h5 div {
   box-sizing: border-box;
 }
-#p-camera-h5 #p-loading {
+#p-camera-h5 #p-loading,
+#p-camera-h5 #p-error {
   width: 100%;
   height: 100%;
   position: absolute;
@@ -161,10 +157,15 @@ dom 结构参考
   left: 0;
   background-color: #000;
   color: #fff;
-  line-height: 100px;
+  line-height: 30px;
   text-align: center;
-  font-size: 20px;
+  padding: 50px;
+  font-size: 18px;
   z-index: 200;
+}
+#p-camera-h5 #p-error {
+  display: none;
+  z-index: 900;
 }
 
 #p-camera-h5 #p-container {
