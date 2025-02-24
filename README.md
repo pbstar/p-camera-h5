@@ -82,12 +82,13 @@ camera.on("record", (file) => {
 
 ## ⚙️ 配置项
 
-| 参数         | 类型        | 默认值                                                                         | 说明                                      |
-| ------------ | ----------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
-| `el`         | HTMLElement | **必填**                                                                       | 挂载容器元素                              |
-| `facingMode` | string      | `environment`                                                                  | 摄像头方向，默认后置，可选 `user`（前置） |
-| `style`      | string      | `""`                                                                           | 自定义 CSS 样式字符串                     |
-| `watermark`  | object      | `{ visible: true, x: 10, y: 290,text:{ text: 'pCameraH5', fontSize: '18px' }}` | 水印配置对象                              |
+| 参数         | 类型        | 默认值             | 说明                                      |
+| ------------ | ----------- | ------------------ | ----------------------------------------- |
+| `el`         | HTMLElement | **必填**           | 挂载容器元素                              |
+| `facingMode` | string      | `environment`      | 摄像头方向，默认后置，可选 `user`（前置） |
+| `isAudio`    | boolean     | `false`            | 是否开启音频录制，默认关闭                |
+| `style`      | string      | `""`               | 自定义 CSS 样式字符串                     |
+| `watermark`  | object      | `{ visible: true}` | 水印配置对象                              |
 
 水印配置对象说明：
 

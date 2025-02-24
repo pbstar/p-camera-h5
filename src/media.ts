@@ -6,11 +6,12 @@ const createProcessedStream = (media: any, config: any, err: any) => {
   canvas.width = media.video.clientWidth;
   canvas.height = media.video.clientHeight;
   const processedStream = canvas.captureStream(30);
-  const audioTracks = media.mediaStream.getAudioTracks();
-  if (audioTracks.length > 0) {
-    processedStream.addTrack(audioTracks[0]);
+  if (config.isAudio) {
+    const audioTracks = media.mediaStream.getAudioTracks();
+    if (audioTracks.length > 0) {
+      processedStream.addTrack(audioTracks[0]);
+    }
   }
-
   const videoElement = document.createElement("video");
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
   videoElement.onloadedmetadata = () => {
@@ -85,7 +86,7 @@ export const setupCamera = async (media: any, config: any, err: any) => {
       video: {
         facingMode,
       },
-      audio: true,
+      audio: config.isAudio,
     });
 
     // 初始化Canvas
@@ -108,7 +109,10 @@ export const setupCamera = async (media: any, config: any, err: any) => {
       await new Promise((resolve) => {
         img.onload = () => resolve(img);
         img.onerror = () => {
-          error(err, "Error accessing media devices: watermark image load error");
+          error(
+            err,
+            "Error accessing media devices: watermark image load error"
+          );
           return resolve(img);
         };
       });

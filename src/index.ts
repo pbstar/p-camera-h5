@@ -23,6 +23,7 @@ class pCameraH5 {
     this.#config = {
       el: null,
       facingMode: "environment", // "user" | "environment"
+      isAudio: false,
       style: "", // 自定义样式
       watermark: {
         visible: false,

@@ -19,6 +19,7 @@ type WatermarkConfig = {
 export type CameraOptions = {
   el: HTMLElement | null;
   facingMode?: string;
+  isAudio?: boolean;
   style?: string;
   watermark?: WatermarkConfig;
 };
