@@ -3,8 +3,16 @@ const createProcessedStream = (media: any, config: any, err: any) => {
   if (!media.canvasCtx || !media.mediaStream) return error(err, "初始化失败");
   if (!media.video) return error(err, "video is required");
   const canvas = document.getElementById("p-canvas") as HTMLCanvasElement;
-  canvas.width = media.video.clientWidth;
-  canvas.height = media.video.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  // 根据设备像素比设置canvas尺寸
+  canvas.width = media.video.clientWidth * dpr;
+  canvas.height = media.video.clientHeight * dpr;
+
+  // 提升画布绘制质量
+  media.canvasCtx.scale(dpr, dpr);
+  media.canvasCtx.imageSmoothingQuality = "high";
+  media.canvasCtx.imageSmoothingEnabled = true;
+
   const processedStream = canvas.captureStream(30);
   if (config.isAudio) {
     const audioTracks = media.mediaStream.getAudioTracks();
@@ -15,8 +23,9 @@ const createProcessedStream = (media: any, config: any, err: any) => {
   const videoElement = document.createElement("video");
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
   videoElement.onloadedmetadata = () => {
-    videoElement.play();
-    drawVideoFrame(videoElement, media, config, err);
+    videoElement.play().then(() => {
+      drawVideoFrame(videoElement, media, config, err);
+    });
   };
 
   return processedStream;
@@ -33,26 +42,42 @@ const drawVideoFrame = (v: any, media: any, config: any, err: any) => {
 const drawWatermark = (media: any, config: any, err: any) => {
   if (media.isWatermarkVisible === false) return;
   if (config.watermark.visible === false) return;
-
   if (!media.canvasCtx.canvas) return error(err, "Canvas is not initialized");
-  let x = 10,
-    y = 10;
-  if (config.watermark.x) x = config.watermark.x;
-  if (config.watermark.y) y = config.watermark.y;
+  const dpr = window.devicePixelRatio || 1;
+  const x = config.watermark.x ? config.watermark.x * dpr : 10 * dpr;
+  const y = config.watermark.y ? config.watermark.y * dpr : 10 * dpr;
   if (config.watermark.text) {
-    let fontSize = "20px";
-    if (config.watermark.text.color)
-      media.canvasCtx.fillStyle = config.watermark.text.color;
-    if (config.watermark.text.fontSize)
-      fontSize = config.watermark.text.fontSize;
-    media.canvasCtx.font = `${fontSize} sans-serif`;
+    // 文字水印适配DPI
+    let baseFontSize = 20;
+    if (config.watermark.text.fontSize) {
+      //如果有px去掉px
+      if (config.watermark.text.fontSize.toString().indexOf("px") > -1) {
+        baseFontSize = parseInt(
+          config.watermark.text.fontSize.replace("px", "")
+        );
+      } else {
+        baseFontSize = parseInt(config.watermark.text.fontSize);
+      }
+    }
+    const fontSize = baseFontSize * dpr;
+    media.canvasCtx.save();
+    media.canvasCtx.scale(1 / dpr, 1 / dpr); // 缩放回逻辑像素
+    media.canvasCtx.fillStyle = config.watermark.text.color || "#FFFFFF";
+    media.canvasCtx.font = `${fontSize}px sans-serif`;
     media.canvasCtx.fillText(config.watermark.text.text, x, y);
+    media.canvasCtx.restore();
   }
   if (config.watermark.image) {
-    let width = 100,
-      height = 100;
-    if (config.watermark.image.width) width = config.watermark.image.width;
-    if (config.watermark.image.height) height = config.watermark.image.height;
+    // 图片水印高清绘制
+    const width = config.watermark.image.width
+      ? config.watermark.image.width * dpr
+      : 100 * dpr;
+    const height = config.watermark.image.height
+      ? config.watermark.image.height * dpr
+      : 100 * dpr;
+    media.canvasCtx.save();
+    media.canvasCtx.scale(1 / dpr, 1 / dpr); // 缩放回逻辑像素
+
     media.canvasCtx.drawImage(
       config.watermark.image.element,
       x,
@@ -60,6 +85,7 @@ const drawWatermark = (media: any, config: any, err: any) => {
       width,
       height
     );
+    media.canvasCtx.restore();
   }
 };
 export const setupCamera = async (media: any, config: any, err: any) => {
@@ -73,23 +99,27 @@ export const setupCamera = async (media: any, config: any, err: any) => {
       video: {
         facingMode,
         width: media.video.clientWidth,
-        height: media.video.clientHeight
+        height: media.video.clientHeight,
       },
       audio: config.isAudio,
     });
 
     // 初始化Canvas
-    media.canvasCtx = canvas.getContext("2d");
+    media.canvasCtx = canvas.getContext("2d", {
+      alpha: false, // 关闭透明度提升渲染性能
+      willReadFrequently: false, // 关闭频繁读取提升渲染性能
+    });
 
     // 处理水印图片
     if (config.watermark.visible && config.watermark.image) {
       const img = new Image();
+      const dpr = window.devicePixelRatio || 1;
       img.src =
         config.watermark.image.url +
         "?r=" +
         Math.random().toString(36).substr(2);
-      img.width = config.watermark.image.width || 100;
-      img.height = config.watermark.image.height || 100;
+      img.width = (config.watermark.image.width || 100) * dpr;
+      img.height = (config.watermark.image.height || 100) * dpr;
       img.crossOrigin = "Anonymous";
       // contain
       img.style.objectFit = "contain";
