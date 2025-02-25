@@ -24,20 +24,7 @@ const createProcessedStream = (media: any, config: any, err: any) => {
 const drawVideoFrame = (v: any, media: any, config: any, err: any) => {
   if (!media.canvasCtx || !media.video) return;
 
-  const scaleRatio = Math.max(
-    media.video.clientWidth / v.videoWidth,
-    media.video.clientHeight / v.videoHeight
-  );
-
-  // 根据缩放比例计算绘制时的宽度和高度
-  const drawWidth = v.videoWidth * scaleRatio;
-  const drawHeight = v.videoHeight * scaleRatio;
-
-  // 计算图像在Canvas上的目标位置，使其居中
-  const x = (media.video.clientWidth - drawWidth) / 2;
-  const y = (media.video.clientHeight - drawHeight) / 2;
-
-  media.canvasCtx.drawImage(v, x, y, drawWidth, drawHeight);
+  media.canvasCtx.drawImage(v, 0, 0, v.videoWidth, v.videoHeight);
   drawWatermark(media, config, err);
   media.animationFrameId = requestAnimationFrame(() =>
     drawVideoFrame(v, media, config, err)
@@ -85,6 +72,8 @@ export const setupCamera = async (media: any, config: any, err: any) => {
     media.mediaStream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode,
+        width: media.video.clientWidth,
+        height: media.video.clientHeight
       },
       audio: config.isAudio,
     });
