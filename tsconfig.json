@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES2021", // 编译目标
-    "module": "esnext", // 模块系统
+    "target": "ESNext", // 编译目标
+    "module": "ESNext", // 模块系统
     "noEmit": true, // 不生成编译后的文件
     "allowImportingTsExtensions": true, // 允许导入.ts 文件
     "moduleResolution": "node", // 模块解析器

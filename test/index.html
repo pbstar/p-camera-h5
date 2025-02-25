@@ -24,16 +24,16 @@
         visible: true,
         x: 10,
         y: 330,
-        image: {
-          url: 'https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg', // 水印图片地址
-          width: 50,
-          height: 50,
-        }, // 图片水印
-        // text:{
-        //   text: 'pCameraH5',
-        //   color: 'rgba(255, 255, 255, 0.5)',
-        //   fontSize: 18,
-        // } // 文字水印
+        // image: {
+        //   url: 'https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg', // 水印图片地址
+        //   width: 50,
+        //   height: 50,
+        // }, // 图片水印
+        text:{
+          text: 'pCameraH5',
+          color: 'rgba(255, 255, 255, 0.5)',
+          fontSize: 18,
+        } // 文字水印
       },
     });
     camera.on('capture', (res) => {
