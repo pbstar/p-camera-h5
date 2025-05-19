@@ -3,7 +3,8 @@ import serve from 'rollup-plugin-serve'
 import json from 'rollup-plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import postcss from 'rollup-plugin-postcss';
-import pa from "./package.json" with { type: "json" };
+import { readFile } from 'fs/promises';
+const pa = JSON.parse(await readFile('./package.json', 'utf-8'));
 const dateTime = () => {
   const now = new Date();
   const year = now.getFullYear(); // 年  

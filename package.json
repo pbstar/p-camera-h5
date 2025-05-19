@@ -1,6 +1,6 @@
 {
   "name": "p-camera-h5",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0",
   "description": "p-camera-h5",
   "main": "./lib/p-camera-h5.es.js",
   "browser": "./lib/p-camera-h5.umd.js",
@@ -13,6 +13,13 @@
   },
   "bugs": {
     "url": "https://github.com/pbstar/p-camera-h5/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./lib/p-camera-h5.es.js",
+      "require": "./lib/p-camera-h5.umd.js"
+    }
   },
   "files": [
     "lib",
