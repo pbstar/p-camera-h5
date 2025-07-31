@@ -8,20 +8,18 @@ type WatermarkImage = {
   width?: number;
   height?: number;
 };
-type WatermarkConfig = {
-  visible?: boolean;
+type Watermark = {
   x?: number;
   y?: number;
   text?: WatermarkText;
-  image?: WatermarkImage;
+  img?: WatermarkImage;
 };
 
 export type CameraOptions = {
   el: HTMLElement | null;
   facingMode?: string;
   isAudio?: boolean;
-  style?: string;
-  watermark?: WatermarkConfig;
+  watermark?: Watermark[] | null;
 };
 
 export type Media = {
@@ -34,11 +32,4 @@ export type Media = {
   canvasStream?: MediaStream;
   animationFrameId?: number;
   video?: HTMLVideoElement | null;
-  isWatermarkVisible?: boolean;
-};
-
-export type Btns = {
-  watermarkBtn?: HTMLElement | null;
-  captureBtn?: HTMLElement | null;
-  recordBtn?: HTMLElement | null;
 };

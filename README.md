@@ -49,13 +49,7 @@ import pCameraH5 from "p-camera-h5";
 
 const camera = new pCameraH5({
   el: document.querySelector("#el"), // 容器选择器
-  style: `
-    #p-camera-h5 #p-record-time {
-      color: rgba(255, 255, 255, 0.9);
-    }
-  `, // 自定义样式
   watermark: {
-    visible: true,
     x: 10,
     y: 290,
     text: {
@@ -66,29 +60,16 @@ const camera = new pCameraH5({
   },
 });
 
-// 事件监听
-camera.on("capture", (file) => {
-  console.log("📷 照片已捕获:", file);
-  camera.downloadFile(file, "photo.png"); // 自动下载
-});
-
-camera.on("record", (file) => {
-  console.log("🎥 视频已生成:", file);
-  camera.downloadFile(file, "video.mp4");
-});
-```
-
 ---
 
 ## ⚙️ 配置项
 
-| 参数         | 类型        | 默认值             | 说明                                      |
-| ------------ | ----------- | ------------------ | ----------------------------------------- |
-| `el`         | HTMLElement | **必填**           | 挂载容器元素                              |
-| `facingMode` | string      | `environment`      | 摄像头方向，默认后置，可选 `user`（前置） |
-| `isAudio`    | boolean     | `false`            | 是否开启音频录制，默认关闭                |
-| `style`      | string      | `""`               | 自定义 CSS 样式字符串                     |
-| `watermark`  | object      | `{ visible: true}` | 水印配置对象                              |
+| 参数         | 类型        | 默认值         | 说明                                      |
+| ------------ | ----------- | -------------- | ----------------------------------------- |
+| `el`         | HTMLElement | **必填**       | 挂载容器元素                              |
+| `facingMode` | string      | `environment`  | 摄像头方向，默认后置，可选 `user`（前置） |
+| `isAudio`    | boolean     | `false`        | 是否开启音频录制，默认关闭                |
+| `watermark`  | object      | `{}:Watermark` | 水印配置对象                              |
 
 水印配置对象说明：
 
@@ -122,131 +103,11 @@ camera.on("record", (file) => {
 camera.on("capture", handlePhoto);
 camera.on("record", handleVideo);
 
-// 移除事件
+// 移除监听
 camera.off("capture", handlePhoto);
 ```
 
 ---
-
-## 📝 样式自定义
-
-dom 结构参考
-
-```html
-<div id="p-camera-h5">
-  <div id="p-loading">加载中...</div>
-  <div id="p-error"></div>
-  <div id="p-container">
-    <video id="p-video" autoplay playsinline></video>
-    <canvas id="p-canvas" style="display:none;"></canvas>
-  </div>
-  <div id="p-watermark-btn">关闭水印</div>
-  <div id="p-capture-btn">拍照</div>
-  <div id="p-record-btn">录制</div>
-  <div id="p-record-time">00:00</div>
-</div>
-```
-
-默认样式参考
-
-```css
-#p-camera-h5 {
-  width: 100%;
-  height: 100%;
-  background-color: #000;
-  position: relative;
-}
-#p-camera-h5 div {
-  box-sizing: border-box;
-}
-#p-camera-h5 #p-loading,
-#p-camera-h5 #p-error {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background-color: #000;
-  color: #fff;
-  line-height: 30px;
-  text-align: center;
-  padding: 50px;
-  font-size: 18px;
-  z-index: 200;
-}
-#p-camera-h5 #p-error {
-  display: none;
-  z-index: 900;
-}
-
-#p-camera-h5 #p-container {
-  width: 100%;
-  height: calc(100% - 150px);
-  position: absolute;
-  top: 50px;
-  left: 0;
-}
-#p-camera-h5 #p-video {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  object-fit: cover;
-}
-#p-camera-h5 #p-canvas {
-  width: 100%;
-  height: 100%;
-}
-#p-camera-h5 #p-capture-btn,
-#p-camera-h5 #p-record-btn {
-  width: 80px;
-  height: 40px;
-  line-height: 40px;
-  text-align: center;
-  border-radius: 10px;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  background-color: #fff;
-}
-#p-camera-h5 #p-capture-btn {
-  position: absolute;
-  bottom: 30px;
-  left: calc(50% - 90px);
-}
-#p-camera-h5 #p-record-btn {
-  position: absolute;
-  bottom: 30px;
-  left: calc(50% + 10px);
-}
-#p-camera-h5 #p-watermark-btn {
-  position: absolute;
-  top: 15px;
-  right: 10px;
-  z-index: 100;
-  width: 60px;
-  height: 20px;
-  line-height: 20px;
-  text-align: center;
-  border-radius: 5px;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  background-color: #fff;
-  font-size: 12px;
-}
-#p-camera-h5 #p-record-time {
-  width: 100%;
-  position: absolute;
-  top: 0px;
-  left: 0;
-  line-height: 50px;
-  color: white;
-  font-size: 18px;
-  text-align: center;
-}
-```
 
 ## 🚨 重要说明
 

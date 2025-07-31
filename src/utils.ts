@@ -1,12 +1,3 @@
-export const downloadFile = (file: File, name?: string) => {
-  const a = document.createElement("a");
-  const url = URL.createObjectURL(file);
-  a.href = url;
-  a.download = name ? name : file.name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-};
 // base64 to file
 export const base64ToFile = (base64: string, ext: string) => {
   const arr: any = base64.split(",");
@@ -25,9 +16,9 @@ export const blobToFile = (blob: Blob, ext: string) => {
     type: blob.type,
   });
 };
+// 深度合并对象
 export const deepMerge = (...sources: any[]) => {
   const result: any = {};
-
   function isPlainObject(item: any) {
     return (
       item !== null &&
@@ -35,14 +26,12 @@ export const deepMerge = (...sources: any[]) => {
       Object.prototype.toString.call(item) === "[object Object]"
     );
   }
-
   sources.forEach((source) => {
     if (isPlainObject(source)) {
       for (const key in source) {
         if (source.hasOwnProperty(key)) {
           const sourceValue = source[key];
           const targetValue = result[key];
-
           if (isPlainObject(sourceValue)) {
             // 递归合并子对象
             if (!isPlainObject(targetValue)) {
@@ -60,11 +49,12 @@ export const deepMerge = (...sources: any[]) => {
       }
     }
   });
-
   return result;
 };
-export const error = (error: any, text: any) => {
+// 错误处理
+export const error = (text: string) => {
+  const error = document.getElementById("p-error") as HTMLDivElement;
   error.textContent = text;
   error.style.display = "block";
-  throw new Error(text);
+  console.error(text);
 };
