@@ -17,7 +17,7 @@ export const elTemplate = `
       background-color: #000;
       line-height: 30px;
       text-align: center;
-      font-size: 18px;
+      font-size: 16px;
       position: absolute;
       top: 0;
       left: 0;

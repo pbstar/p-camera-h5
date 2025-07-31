@@ -30,6 +30,10 @@ class pCameraH5 {
 
   async #init() {
     if (!this.#config.el) return console.error("el is required");
+    if (!this.#media) this.#media = {};
+    this.#media.width = this.#config.el.clientWidth;
+    this.#media.height = this.#config.el.clientHeight;
+    this.#media.dpr = window.devicePixelRatio || 1;
     this.#config.el.innerHTML = elTemplate;
     const loading = document.getElementById("p-loading") as HTMLDivElement;
     loading.style.display = "block";

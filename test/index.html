@@ -1,48 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-
-<body>
-  <div id="el" style="width: 300px;height: 500px;"></div>
-  <script src="../lib/p-camera-h5.umd.js"></script>
-  <script>
-    const camera = new pCameraH5({
-      el: document.querySelector('#el'),   // 容器选择器
-      facingMode: 'environment',  // 摄像头方向
-      style: `
-        #p-camera-h5 #p-record-time {
-          color: rgba(255, 255, 255, 0.9);
-        }
-      `,                        // 自定义样式
-      watermark: {
-        visible: true,
-        x: 10,
-        y: 330,
-        // image: {
-        //   url: 'https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg', // 水印图片地址
-        //   width: 50,
-        //   height: 50,
-        // }, // 图片水印
-        text:{
-          text: 'pCameraH5',
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontSize: 18,
-        } // 文字水印
-      },
-    });
-    camera.on('capture', (res) => {
-      camera.api.downloadFile(res);
-    });
-    camera.on('record', (res) => {
-      camera.api.downloadFile(res);
-    });
-  </script>
-</body>
-
+  <body>
+    <div id="el" style="width: 200px; height: 400px"></div>
+    <script src="../lib/p-camera-h5.umd.js"></script>
+    <script>
+      const camera = new pCameraH5({
+        el: document.querySelector("#el"), // 容器选择器
+        facingMode: "environment", // 摄像头方向
+        watermark: [
+          {
+            x: 10,
+            y: 330,
+            // img: {
+            //   url: 'https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg', // 水印图片地址
+            //   width: 50,
+            //   height: 50,
+            // }, // 图片水印
+            text: {
+              text: "pCameraH5",
+              color: "rgba(255, 255, 255, 0.5)",
+              fontSize: 18,
+            }, // 文字水印
+          },
+        ],
+      });
+    </script>
+  </body>
 </html>

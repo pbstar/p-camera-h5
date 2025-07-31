@@ -1,18 +1,19 @@
 type WatermarkText = {
-  text?: string;
+  text: string;
   color?: string;
-  fontSize?: string;
+  fontSize?: number;
 };
 type WatermarkImage = {
-  url?: string;
+  url: string;
+  el?: HTMLImageElement;
   width?: number;
   height?: number;
 };
 type Watermark = {
   x?: number;
   y?: number;
-  text?: WatermarkText;
-  img?: WatermarkImage;
+  text?: WatermarkText | string;
+  img?: WatermarkImage | string;
 };
 
 export type CameraOptions = {
@@ -23,6 +24,9 @@ export type CameraOptions = {
 };
 
 export type Media = {
+  width?: number;
+  height?: number;
+  dpr?: number;
   mediaStream?: MediaStream;
   mediaRecorder?: MediaRecorder;
   recordedChunks?: Blob[];
