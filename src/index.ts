@@ -16,6 +16,7 @@ class pCameraH5 {
   #btns: Btns | null;
   #watch: any; //camera,record
   #error: any;
+  #initialized = false;
   api: { [key: string]: Function };
   on: (type: string, callback: Function) => void;
   off: (type: string, callback: Function) => void;
@@ -54,6 +55,11 @@ class pCameraH5 {
   }
 
   async init() {
+    if (this.#initialized) {
+      console.warn("Camera is already initialized");
+      return;
+    }
+    this.#initialized = true;
     this.#setupUI();
     this.#setupBtns();
     await setupCamera(this.#media, this.#config, this.#error);

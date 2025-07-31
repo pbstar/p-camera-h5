@@ -10,6 +10,7 @@
 
 <body>
   <div id="el" style="width: 300px;height: 500px;"></div>
+  <button id="destroy">销毁</button>
   <script src="../lib/p-camera-h5.umd.js"></script>
   <script>
     const camera = new pCameraH5({
@@ -36,12 +37,16 @@
         } // 文字水印
       },
     });
+    camera.api.init()
     camera.on('capture', (res) => {
       camera.api.downloadFile(res);
     });
     camera.on('record', (res) => {
       camera.api.downloadFile(res);
     });
+    document.querySelector('#destroy').addEventListener('click', () => {
+      camera.api.destroy();
+    })
   </script>
 </body>
 
