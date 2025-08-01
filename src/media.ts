@@ -1,10 +1,11 @@
 import { error } from "./utils";
 export const setupCamera = async (media: any, config: any) => {
   try {
-    media.video = document.getElementById("p-video");
-    const canvas = document.createElement("canvas");
-    canvas.width = media.width;
-    canvas.height = media.height;
+    media.canvas.width = media.width * media.dpr;
+    media.canvas.height = media.height * media.dpr;
+    media.canvas.style.width = media.width + "px";
+    media.canvas.style.height = media.height + "px";
+
     // 获取原始媒体流
     media.mediaStream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -13,16 +14,20 @@ export const setupCamera = async (media: any, config: any) => {
       audio: config.isAudio,
     });
     // 初始化Canvas
-    media.canvasCtx = canvas.getContext("2d", {
+    media.canvasCtx = media.canvas.getContext("2d", {
       alpha: false, // 关闭透明度提升渲染性能
       willReadFrequently: false, // 关闭频繁读取提升渲染性能
     });
+    media.canvasCtx.scale(1, 1);
+    media.canvasCtx.imageSmoothingQuality = "high";
+    media.canvasCtx.imageSmoothingEnabled = true;
     // 处理水印数据
     if (config.watermark) {
       await handleWatermark(media, config);
     }
     // 创建带水印的视频流
     media.canvasStream = createProcessedStream(media, config);
+
     // 显示处理后的视频
     media.video.srcObject = media.canvasStream;
   } catch (e: any) {
@@ -88,24 +93,15 @@ const handleWatermark = async (media: any, config: any) => {
 const createProcessedStream = (media: any, config: any) => {
   if (!media.canvasCtx || !media.mediaStream || !media.video)
     return error("初始化失败");
-  const canvas = document.createElement("canvas");
-  const dpr = media.dpr;
-  // 根据设备像素比设置canvas尺寸
-  canvas.width = media.video.clientWidth * dpr;
-  canvas.height = media.video.clientHeight * dpr;
 
-  // 提升画布绘制质量
-  media.canvasCtx.scale(dpr, dpr);
-  media.canvasCtx.imageSmoothingQuality = "high";
-  media.canvasCtx.imageSmoothingEnabled = true;
-
-  const processedStream = canvas.captureStream(30);
+  const processedStream = media.canvas.captureStream(30);
   if (config.isAudio) {
     const audioTracks = media.mediaStream.getAudioTracks();
     if (audioTracks.length > 0) {
       processedStream.addTrack(audioTracks[0]);
     }
   }
+
   const videoElement = document.createElement("video");
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
   videoElement.onloadedmetadata = () => {
@@ -131,7 +127,16 @@ const drawVideoFrame = (v: any, media: any, config: any) => {
   const x = (media.video.clientWidth - drawWidth) / 2;
   const y = (media.video.clientHeight - drawHeight) / 2;
 
+  // 保存当前的绘图状态
+  media.canvasCtx.save();
+
+  // 水平翻转视频（解决左右反转问题）
+  media.canvasCtx.scale(-1 * media.dpr, 1 * media.dpr);
+  media.canvasCtx.translate(-media.canvas.width / media.dpr, 0);
   media.canvasCtx.drawImage(v, x, y, drawWidth, drawHeight);
+
+  // 恢复之前的绘图状态
+  media.canvasCtx.restore();
   if (config.watermark && config.watermark.length > 0) {
     drawWatermark(media, config);
   }
@@ -146,29 +151,18 @@ const drawWatermark = (media: any, config: any) => {
     const x = item.x * dpr;
     const y = item.y * dpr;
     media.canvasCtx.save();
-    media.canvasCtx.scale(1 / dpr, 1 / dpr); // 缩放回逻辑像素
     if (item.text) {
       media.canvasCtx.fillStyle = item.text.color;
       media.canvasCtx.font = `${item.text.fontSize * dpr}px sans-serif`;
       media.canvasCtx.fillText(item.text.text, x, y);
-    } else if (item.img && item.img.el) {
-      // 确保 item.img.el 是有效的图像源
-      if (
-        item.img.el instanceof HTMLImageElement ||
-        item.img.el instanceof HTMLCanvasElement ||
-        item.img.el instanceof HTMLVideoElement ||
-        item.img.el instanceof ImageBitmap
-      ) {
-        media.canvasCtx.drawImage(
-          item.img.el,
-          x,
-          y,
-          item.img.width * dpr,
-          item.img.height * dpr
-        );
-      } else {
-        console.warn("Invalid image source for watermark", item.img.el);
-      }
+    } else if (item.img) {
+      media.canvasCtx.drawImage(
+        item.img.el,
+        x,
+        y,
+        item.img.width * dpr,
+        item.img.height * dpr
+      );
     }
     media.canvasCtx.restore();
   });

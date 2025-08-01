@@ -28,6 +28,7 @@ export type Media = {
   height?: number;
   dpr?: number;
   video?: HTMLVideoElement | null;
+  canvas?: HTMLCanvasElement | null;
   mediaStream?: MediaStream;
   mediaRecorder?: MediaRecorder;
   recordedChunks?: Blob[];

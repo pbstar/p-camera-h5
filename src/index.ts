@@ -101,6 +101,10 @@ class pCameraH5 {
     this.#media.dpr = window.devicePixelRatio || 1;
     this.#config.el.innerHTML = elTemplate;
     const loading = document.getElementById("p-loading") as HTMLDivElement;
+    const canvas = document.createElement("canvas");
+    this.#media.canvas = canvas;
+    const video = document.getElementById("p-video") as HTMLVideoElement;
+    this.#media.video = video;
     loading.style.display = "block";
     await setupCamera(this.#media, this.#config);
     loading.style.display = "none";
