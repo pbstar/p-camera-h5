@@ -19,7 +19,7 @@ export const setupCamera = async (media: any, config: any) => {
     });
     // 处理水印数据
     if (config.watermark) {
-      handleWatermark(media, config);
+      await handleWatermark(media, config);
     }
     // 创建带水印的视频流
     media.canvasStream = createProcessedStream(media, config);
@@ -31,8 +31,18 @@ export const setupCamera = async (media: any, config: any) => {
 };
 
 // 处理水印数据
-const handleWatermark = (media: any, config: any) => {
-  config.watermark.forEach(async (item: any) => {
+const handleWatermark = async (media: any, config: any) => {
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = url + "?r=" + new Date().getTime();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (err) => reject(err);
+    });
+  };
+
+  for (const item of config.watermark) {
     if (item.text) {
       if (typeof item.text === "string") {
         item.text = {
@@ -41,7 +51,10 @@ const handleWatermark = (media: any, config: any) => {
           color: "rgba(255, 255, 255, 0.5)",
         };
       }
-      if (item.text.fontSize.toString().indexOf("px") > -1) {
+      if (
+        item.text.fontSize &&
+        item.text.fontSize.toString().indexOf("px") > -1
+      ) {
         item.text.fontSize = parseInt(
           item.text.fontSize.toString().replace("px", "")
         );
@@ -56,24 +69,20 @@ const handleWatermark = (media: any, config: any) => {
         };
       }
       if (item.img.url) {
-        const img = new Image();
-        img.src = item.img.url + "?r=" + new Date().getTime();
-        img.width = item.img.width * media.dpr;
-        img.height = item.img.height * media.dpr;
-        img.crossOrigin = "Anonymous";
-        img.style.objectFit = "contain";
-        img.referrerPolicy = "no-referrer";
-        await new Promise((resolve) => {
-          img.onload = () => resolve(img);
-          img.onerror = () => {
-            error("Error accessing media devices: watermark image load error");
-            return resolve(img);
-          };
-        });
-        item.img.el = img;
+        try {
+          const img = await loadImage(item.img.url);
+          img.width = item.img.width * media.dpr;
+          img.height = item.img.height * media.dpr;
+          img.style.objectFit = "contain";
+          img.referrerPolicy = "no-referrer";
+          item.img.el = img;
+        } catch (e) {
+          error("Error accessing media devices: watermark image load error");
+          console.error(e);
+        }
       }
     }
-  });
+  }
 };
 
 const createProcessedStream = (media: any, config: any) => {
@@ -142,14 +151,24 @@ const drawWatermark = (media: any, config: any) => {
       media.canvasCtx.fillStyle = item.text.color;
       media.canvasCtx.font = `${item.text.fontSize * dpr}px sans-serif`;
       media.canvasCtx.fillText(item.text.text, x, y);
-    } else if (item.img) {
-      media.canvasCtx.drawImage(
-        item.img.el,
-        x,
-        y,
-        item.img.width * dpr,
-        item.img.height * dpr
-      );
+    } else if (item.img && item.img.el) {
+      // 确保 item.img.el 是有效的图像源
+      if (
+        item.img.el instanceof HTMLImageElement ||
+        item.img.el instanceof HTMLCanvasElement ||
+        item.img.el instanceof HTMLVideoElement ||
+        item.img.el instanceof ImageBitmap
+      ) {
+        media.canvasCtx.drawImage(
+          item.img.el,
+          x,
+          y,
+          item.img.width * dpr,
+          item.img.height * dpr
+        );
+      } else {
+        console.warn("Invalid image source for watermark", item.img.el);
+      }
     }
     media.canvasCtx.restore();
   });
