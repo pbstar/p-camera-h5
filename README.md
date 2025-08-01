@@ -56,7 +56,7 @@ const camera = new pCameraH5({
       text: "pCameraH5",
       color: "rgba(255, 255, 255, 0.5)",
       fontSize: "18px",
-    }, // 文字水印
+    },
   },
 });
 
@@ -69,7 +69,7 @@ const camera = new pCameraH5({
 | `el`         | HTMLElement | **必填**       | 挂载容器元素                              |
 | `facingMode` | string      | `environment`  | 摄像头方向，默认后置，可选 `user`（前置） |
 | `isAudio`    | boolean     | `false`        | 是否开启音频录制，默认关闭                |
-| `watermark`  | object      | `{}:Watermark` | 水印配置对象                              |
+| `watermark`  | array      | `[]:Watermark` | 水印配置对象                              |
 
 水印配置对象说明：
 

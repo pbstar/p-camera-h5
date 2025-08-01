@@ -27,13 +27,13 @@ export type Media = {
   width?: number;
   height?: number;
   dpr?: number;
+  video?: HTMLVideoElement | null;
   mediaStream?: MediaStream;
   mediaRecorder?: MediaRecorder;
   recordedChunks?: Blob[];
-  recordTimer?: number;
-  recordTime?: HTMLElement | null;
   canvasCtx?: CanvasRenderingContext2D;
   canvasStream?: MediaStream;
   animationFrameId?: number;
-  video?: HTMLVideoElement | null;
+  recordTimer?: number;
+  recordSecond?: number;
 };

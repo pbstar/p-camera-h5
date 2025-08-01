@@ -12,25 +12,29 @@
     <script src="../lib/p-camera-h5.umd.js"></script>
     <script>
       const camera = new pCameraH5({
-        el: document.querySelector("#el"), // 容器选择器
-        facingMode: "environment", // 摄像头方向
+        el: document.querySelector("#el"),
         watermark: [
           {
             x: 10,
-            y: 330,
-            // img: {
-            //   url: 'https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg', // 水印图片地址
-            //   width: 50,
-            //   height: 50,
-            // }, // 图片水印
+            y: 30,
             text: {
               text: "pCameraH5",
               color: "rgba(255, 255, 255, 0.5)",
               fontSize: 18,
-            }, // 文字水印
+            },
+          },
+          {
+            x: 10,
+            y: 90,
+            img: {
+              url: "https://profile-avatar.csdnimg.cn/93e3521a7cd640a1b2af5ae85f9de76c_chuenst.jpg", // 水印图片地址
+              width: 50,
+              height: 50,
+            },
           },
         ],
       });
+      console.log(camera);
     </script>
   </body>
 </html>
