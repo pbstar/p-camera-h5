@@ -1,11 +1,11 @@
 import { error } from "./utils";
 export const setupCamera = async (media: any, config: any) => {
   try {
+    // 设置Canvas大小
     media.canvas.width = media.width * media.dpr;
     media.canvas.height = media.height * media.dpr;
     media.canvas.style.width = media.width + "px";
     media.canvas.style.height = media.height + "px";
-
     // 获取原始媒体流
     media.mediaStream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -13,12 +13,11 @@ export const setupCamera = async (media: any, config: any) => {
       },
       audio: config.isAudio,
     });
-    // 初始化Canvas
+    // 初始化canvasCtx
     media.canvasCtx = media.canvas.getContext("2d", {
       alpha: false, // 关闭透明度提升渲染性能
       willReadFrequently: false, // 关闭频繁读取提升渲染性能
     });
-    media.canvasCtx.scale(1, 1);
     media.canvasCtx.imageSmoothingQuality = "high";
     media.canvasCtx.imageSmoothingEnabled = true;
     // 处理水印数据
@@ -27,7 +26,6 @@ export const setupCamera = async (media: any, config: any) => {
     }
     // 创建带水印的视频流
     media.canvasStream = createProcessedStream(media, config);
-
     // 显示处理后的视频
     media.video.srcObject = media.canvasStream;
   } catch (e: any) {
@@ -37,16 +35,23 @@ export const setupCamera = async (media: any, config: any) => {
 
 // 处理水印数据
 const handleWatermark = async (media: any, config: any) => {
+  // 加载水印图片
   const loadImage = (url: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.src = url + "?r=" + new Date().getTime();
-      img.crossOrigin = "Anonymous";
       img.onload = () => resolve(img);
       img.onerror = (err) => reject(err);
     });
   };
-
+  // 像素转换为数字
+  const pxtoNum = (px: any) => {
+    if (typeof px === "number") return px;
+    if (typeof px === "string") return parseInt(px.replace("px", ""));
+    return 0;
+  };
+  // 处理水印数据
   for (const item of config.watermark) {
     if (item.text) {
       if (typeof item.text === "string") {
@@ -56,14 +61,7 @@ const handleWatermark = async (media: any, config: any) => {
           color: "rgba(255, 255, 255, 0.5)",
         };
       }
-      if (
-        item.text.fontSize &&
-        item.text.fontSize.toString().indexOf("px") > -1
-      ) {
-        item.text.fontSize = parseInt(
-          item.text.fontSize.toString().replace("px", "")
-        );
-      }
+      item.text.fontSize = pxtoNum(item.text.fontSize);
     }
     if (item.img) {
       if (typeof item.img === "string") {
@@ -73,11 +71,15 @@ const handleWatermark = async (media: any, config: any) => {
           height: 100,
         };
       }
+      item.img.width = pxtoNum(item.img.width);
+      item.img.height = pxtoNum(item.img.height);
       if (item.img.url) {
         try {
           const img = await loadImage(item.img.url);
           img.width = item.img.width * media.dpr;
           img.height = item.img.height * media.dpr;
+          img.style.width = item.img.width + "px";
+          img.style.height = item.img.height + "px";
           img.style.objectFit = "contain";
           img.referrerPolicy = "no-referrer";
           item.img.el = img;
@@ -89,11 +91,9 @@ const handleWatermark = async (media: any, config: any) => {
     }
   }
 };
-
+// 创建带水印的视频流
 const createProcessedStream = (media: any, config: any) => {
-  if (!media.canvasCtx || !media.mediaStream || !media.video)
-    return error("初始化失败");
-
+  if (!media.canvasCtx || !media.mediaStream) return error("初始化失败");
   const processedStream = media.canvas.captureStream(30);
   if (config.isAudio) {
     const audioTracks = media.mediaStream.getAudioTracks();
@@ -101,7 +101,6 @@ const createProcessedStream = (media: any, config: any) => {
       processedStream.addTrack(audioTracks[0]);
     }
   }
-
   const videoElement = document.createElement("video");
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
   videoElement.onloadedmetadata = () => {
@@ -109,32 +108,25 @@ const createProcessedStream = (media: any, config: any) => {
       drawVideoFrame(videoElement, media, config);
     });
   };
-
   return processedStream;
 };
+// 绘制视频帧
 const drawVideoFrame = (v: any, media: any, config: any) => {
-  if (!media.canvasCtx || !media.video) return;
+  if (!media.canvasCtx) return error("Canvas is not initialized");
   const scaleRatio = Math.max(
     media.video.clientWidth / v.videoWidth,
     media.video.clientHeight / v.videoHeight
   );
-
   // 根据缩放比例计算绘制时的宽度和高度
   const drawWidth = v.videoWidth * scaleRatio;
   const drawHeight = v.videoHeight * scaleRatio;
-
   // 计算图像在Canvas上的目标位置，使其居中
   const x = (media.video.clientWidth - drawWidth) / 2;
   const y = (media.video.clientHeight - drawHeight) / 2;
-
   // 保存当前的绘图状态
   media.canvasCtx.save();
-
-  // 水平翻转视频（解决左右反转问题）
-  media.canvasCtx.scale(-1 * media.dpr, 1 * media.dpr);
-  media.canvasCtx.translate(-media.canvas.width / media.dpr, 0);
+  // 绘制视频帧
   media.canvasCtx.drawImage(v, x, y, drawWidth, drawHeight);
-
   // 恢复之前的绘图状态
   media.canvasCtx.restore();
   if (config.watermark && config.watermark.length > 0) {

@@ -95,15 +95,15 @@ class pCameraH5 {
   // 初始化
   async #init() {
     if (!this.#config.el) return console.error("el is required");
+    this.#config.el.innerHTML = elTemplate;
     if (!this.#media) this.#media = {};
     this.#media.width = this.#config.el.clientWidth;
     this.#media.height = this.#config.el.clientHeight;
     this.#media.dpr = window.devicePixelRatio || 1;
-    this.#config.el.innerHTML = elTemplate;
     const loading = document.getElementById("p-loading") as HTMLDivElement;
     const canvas = document.createElement("canvas");
-    this.#media.canvas = canvas;
     const video = document.getElementById("p-video") as HTMLVideoElement;
+    this.#media.canvas = canvas;
     this.#media.video = video;
     loading.style.display = "block";
     await setupCamera(this.#media, this.#config);
