@@ -1,44 +1,42 @@
 type WatermarkText = {
-  text?: string;
+  text: string;
   color?: string;
-  fontSize?: string;
+  fontSize?: number;
 };
 type WatermarkImage = {
-  url?: string;
+  url: string;
+  el?: HTMLImageElement;
   width?: number;
   height?: number;
 };
-type WatermarkConfig = {
-  visible?: boolean;
+type Watermark = {
   x?: number;
   y?: number;
-  text?: WatermarkText;
-  image?: WatermarkImage;
+  text?: WatermarkText | string;
+  img?: WatermarkImage | string;
 };
 
 export type CameraOptions = {
   el: HTMLElement | null;
   facingMode?: string;
   isAudio?: boolean;
-  style?: string;
-  watermark?: WatermarkConfig;
+  isMirror?: boolean;
+  watermark?: Watermark[] | null;
 };
 
 export type Media = {
+  width?: number;
+  height?: number;
+  dpr?: number;
+  video?: HTMLVideoElement | null;
+  canvas?: HTMLCanvasElement | null;
   mediaStream?: MediaStream;
-  mediaRecorder?: MediaRecorder;
-  recordedChunks?: Blob[];
-  recordTimer?: number;
-  recordTime?: HTMLElement | null;
   canvasCtx?: CanvasRenderingContext2D;
   canvasStream?: MediaStream;
   animationFrameId?: number;
-  video?: HTMLVideoElement | null;
-  isWatermarkVisible?: boolean;
 };
 
-export type Btns = {
-  watermarkBtn?: HTMLElement | null;
-  captureBtn?: HTMLElement | null;
-  recordBtn?: HTMLElement | null;
+export type Record = {
+  recorder?: MediaRecorder | null;
+  chunks?: Blob[];
 };

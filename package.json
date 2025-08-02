@@ -1,7 +1,7 @@
 {
   "name": "p-camera-h5",
-  "version": "1.0.1",
-  "description": "p-camera-h5",
+  "version": "2.0.0",
+  "description": "p-camera-h5 是一个基于 h5 实现的相机插件",
   "main": "./lib/p-camera-h5.es.js",
   "browser": "./lib/p-camera-h5.umd.js",
   "unpkg": "./lib/p-camera-h5.umd.js",
