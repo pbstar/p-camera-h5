@@ -20,6 +20,7 @@ export type CameraOptions = {
   el: HTMLElement | null;
   facingMode?: string;
   isAudio?: boolean;
+  isMirror?: boolean;
   watermark?: Watermark[] | null;
 };
 

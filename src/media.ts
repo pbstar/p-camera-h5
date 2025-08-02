@@ -57,7 +57,7 @@ const handleWatermark = async (media: any, config: any) => {
       if (typeof item.text === "string") {
         item.text = {
           text: item.text,
-          fontSize: 20,
+          fontSize: 18,
           color: "rgba(255, 255, 255, 0.5)",
         };
       }
@@ -129,7 +129,18 @@ const drawVideoFrame = (v: any, media: any, config: any) => {
   // 绘制视频画面
   media.canvasCtx.save();
   media.canvasCtx.clearRect(0, 0, cw, ch);
-  media.canvasCtx.drawImage(v, offsetX, offsetY, drawWidth, drawHeight);
+  if (config.isMirror) {
+    media.canvasCtx.scale(-1, 1);
+    media.canvasCtx.drawImage(
+      v,
+      -offsetX - drawWidth,
+      offsetY,
+      drawWidth,
+      drawHeight
+    );
+  } else {
+    media.canvasCtx.drawImage(v, offsetX, offsetY, drawWidth, drawHeight);
+  }
   media.canvasCtx.restore();
   // 绘制水印
   if (config.watermark && config.watermark.length > 0) {

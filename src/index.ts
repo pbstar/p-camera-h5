@@ -16,10 +16,11 @@ class pCameraH5 {
       el: null,
       facingMode: "environment", // "user" | "environment"
       isAudio: false,
+      isMirror: false,
       watermark: [
         {
           x: 10,
-          y: 10,
+          y: 28,
           text: "p-camera-h5",
         },
       ],
