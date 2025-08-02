@@ -84,8 +84,9 @@ const handleWatermark = async (media: any, config: any) => {
           img.referrerPolicy = "no-referrer";
           item.img.el = img;
         } catch (e) {
-          error("Error accessing media devices: watermark image load error");
-          console.error(e);
+          return error(
+            "Error accessing media devices: watermark image load error"
+          );
         }
       }
     }
@@ -113,22 +114,24 @@ const createProcessedStream = (media: any, config: any) => {
 // 绘制视频帧
 const drawVideoFrame = (v: any, media: any, config: any) => {
   if (!media.canvasCtx) return error("Canvas is not initialized");
-  const scaleRatio = Math.max(
-    media.video.clientWidth / v.videoWidth,
-    media.video.clientHeight / v.videoHeight
-  );
-  // 根据缩放比例计算绘制时的宽度和高度
-  const drawWidth = v.videoWidth * scaleRatio;
-  const drawHeight = v.videoHeight * scaleRatio;
-  // 计算图像在Canvas上的目标位置，使其居中
-  const x = (media.video.clientWidth - drawWidth) / 2;
-  const y = (media.video.clientHeight - drawHeight) / 2;
-  // 保存当前的绘图状态
+  const cw = media.width * media.dpr;
+  const ch = media.height * media.dpr;
+  // 计算缩放比例以填满画布
+  const scaleX = cw / v.videoWidth;
+  const scaleY = ch / v.videoHeight;
+  const scale = Math.max(scaleX, scaleY);
+  // 计算绘制宽高
+  const drawWidth = v.videoWidth * scale;
+  const drawHeight = v.videoHeight * scale;
+  // 计算居中偏移量
+  const offsetX = (cw - drawWidth) / 2;
+  const offsetY = (ch - drawHeight) / 2;
+  // 绘制视频画面
   media.canvasCtx.save();
-  // 绘制视频帧
-  media.canvasCtx.drawImage(v, x, y, drawWidth, drawHeight);
-  // 恢复之前的绘图状态
+  media.canvasCtx.clearRect(0, 0, cw, ch);
+  media.canvasCtx.drawImage(v, offsetX, offsetY, drawWidth, drawHeight);
   media.canvasCtx.restore();
+  // 绘制水印
   if (config.watermark && config.watermark.length > 0) {
     drawWatermark(media, config);
   }
@@ -137,7 +140,6 @@ const drawVideoFrame = (v: any, media: any, config: any) => {
   );
 };
 const drawWatermark = (media: any, config: any) => {
-  if (!media.canvasCtx.canvas) return error("Canvas is not initialized");
   const dpr = media.dpr;
   config.watermark.forEach((item: any) => {
     const x = item.x * dpr;

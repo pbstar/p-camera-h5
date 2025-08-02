@@ -1,11 +1,12 @@
-import { CameraOptions, Media } from "./types";
+import { CameraOptions, Media, Record } from "./types";
 import { elTemplate } from "./constants";
 import { setupCamera } from "./media";
 import { base64ToFile, blobToFile, deepMerge, error } from "./utils";
 
 class pCameraH5 {
   #config: CameraOptions;
-  #media: Media | null = {};
+  #media: Media = {};
+  #record: Record = {};
   capture: Function;
   startRecording: Function;
   stopRecording: Function;
@@ -28,67 +29,54 @@ class pCameraH5 {
     // 拍照
     this.capture = () => {
       return new Promise((resolve, reject) => {
-        if (!this.#media) return error("Media is not initialized");
-        if (!this.#media.canvasCtx) return error("Canvas未初始化");
-        if (!this.#media.video) return error("Video未初始化");
-        const canvas = document.createElement("canvas");
-        canvas.width = this.#media.video.videoWidth;
-        canvas.height = this.#media.video.videoHeight;
-        const ctx: any = canvas.getContext("2d");
-        ctx.drawImage(this.#media.canvasCtx.canvas, 0, 0);
-        resolve(base64ToFile(canvas.toDataURL("image/png"), "png"));
+        if (!this.#media.canvas) return console.error("请先初始化");
+        const img = this.#media.canvas.toDataURL("image/png");
+        resolve(base64ToFile(img, "png"));
       });
     };
     // 开始录像
     this.startRecording = () => {
-      if (!this.#media) return error("Media is not initialized");
-      if (this.#media.recordSecond) return console.error("已在录像");
-      this.#media.recordedChunks = [];
-      if (!this.#media.canvasStream) return error("canvasStream is required");
-      this.#media.mediaRecorder = new MediaRecorder(this.#media.canvasStream);
-      this.#media.mediaRecorder.ondataavailable = (e) => {
+      if (this.#record.recorder) return console.error("已在录像");
+      this.#record.chunks = [];
+      if (!this.#media.canvasStream) return console.error("请先初始化");
+      this.#record.recorder = new MediaRecorder(this.#media.canvasStream);
+      this.#record.recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
-          if (!this.#media) return error("Media is not initialized");
-          if (!this.#media.recordedChunks) this.#media.recordedChunks = [];
-          this.#media.recordedChunks.push(e.data);
+          if (!this.#record.chunks) this.#record.chunks = [];
+          this.#record.chunks.push(e.data);
         }
       };
-      if (!this.#media.mediaRecorder) return error("mediaRecorder is required");
-      this.#media.mediaRecorder.start();
-      // Start timer
-      this.#media.recordSecond = 0;
-      this.#media.recordTimer = window.setInterval(() => {
-        if (this.#media && this.#media.recordSecond !== undefined) {
-          this.#media.recordSecond++;
-        }
-      }, 1000);
+      this.#record.recorder.start();
     };
     // 停止录像
     this.stopRecording = () => {
       return new Promise((resolve, reject) => {
-        if (!this.#media) return error("Media is not initialized");
-        if (!this.#media.mediaRecorder)
-          return error("mediaRecorder is required");
-        this.#media.mediaRecorder.onstop = () => {
-          const blob = new Blob(this.#media?.recordedChunks, {
+        if (!this.#record.recorder) return console.error("未开始录像");
+        this.#record.recorder.onstop = () => {
+          const blob = new Blob(this.#record.chunks, {
             type: "video/webm",
           });
-          clearInterval(this.#media?.recordTimer);
           resolve(blobToFile(blob, "mp4"));
         };
-        this.#media.mediaRecorder.stop();
+        this.#record.recorder.stop();
+        this.#record.recorder = null;
       });
     };
     // 销毁
     this.destroy = () => {
-      if (!this.#media) return error("media is required");
-      if (!this.#config) return error("config is required");
-      if (!this.#config.el) return error("el is required");
+      if (!this.#config.el) return console.error("请先初始化");
       if (this.#media.animationFrameId) {
         cancelAnimationFrame(this.#media.animationFrameId);
       }
-      if (!this.#media.mediaStream) return error("mediaStream is required");
-      this.#media.mediaStream.getTracks().forEach((track: any) => track.stop());
+      if (this.#media.mediaStream) {
+        this.#media.mediaStream
+          .getTracks()
+          .forEach((track: any) => track.stop());
+      }
+      if (this.#record.recorder) {
+        this.#record.recorder.stop();
+        this.#record.recorder = null;
+      }
       this.#config.el.innerHTML = "";
     };
   }
@@ -96,7 +84,6 @@ class pCameraH5 {
   async #init() {
     if (!this.#config.el) return console.error("el is required");
     this.#config.el.innerHTML = elTemplate;
-    if (!this.#media) this.#media = {};
     this.#media.width = this.#config.el.clientWidth;
     this.#media.height = this.#config.el.clientHeight;
     this.#media.dpr = window.devicePixelRatio || 1;

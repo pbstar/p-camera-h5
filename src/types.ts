@@ -30,11 +30,12 @@ export type Media = {
   video?: HTMLVideoElement | null;
   canvas?: HTMLCanvasElement | null;
   mediaStream?: MediaStream;
-  mediaRecorder?: MediaRecorder;
-  recordedChunks?: Blob[];
   canvasCtx?: CanvasRenderingContext2D;
   canvasStream?: MediaStream;
   animationFrameId?: number;
-  recordTimer?: number;
-  recordSecond?: number;
+};
+
+export type Record = {
+  recorder?: MediaRecorder | null;
+  chunks?: Blob[];
 };
