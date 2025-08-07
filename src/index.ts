@@ -66,18 +66,44 @@ class pCameraH5 {
     // 销毁
     this.destroy = () => {
       if (!this.#config.el) return console.error("请先初始化");
+      // 停止动画帧
       if (this.#media.animationFrameId) {
         cancelAnimationFrame(this.#media.animationFrameId);
+        this.#media.animationFrameId = null;
       }
+      // 停止并清理媒体流
       if (this.#media.mediaStream) {
         this.#media.mediaStream
           .getTracks()
           .forEach((track: any) => track.stop());
+        this.#media.mediaStream = null;
       }
+      // 停止并清理画布流
+      if (this.#media.canvasStream) {
+        this.#media.canvasStream
+          .getTracks()
+          .forEach((track: any) => track.stop());
+        this.#media.canvasStream = null;
+      }
+      // 停止录像器
       if (this.#record.recorder) {
         this.#record.recorder.stop();
         this.#record.recorder = null;
       }
+      // 清理画布
+      if (this.#media.canvas) {
+        this.#media.canvas = null;
+      }
+      // 清理视频元素
+      if (this.#media.video) {
+        this.#media.video = null;
+      }
+      // 清理在 createProcessedStream 中创建的 video 元素
+      if (this.#media.processedVideo) {
+        this.#media.processedVideo.srcObject = null;
+        this.#media.processedVideo = null;
+      }
+      // 清空容器
       this.#config.el.innerHTML = "";
     };
   }

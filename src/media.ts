@@ -103,6 +103,7 @@ const createProcessedStream = (media: any, config: any) => {
     }
   }
   const videoElement = document.createElement("video");
+  media.processedVideo = videoElement;
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
   videoElement.onloadedmetadata = () => {
     videoElement.play().then(() => {

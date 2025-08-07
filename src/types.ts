@@ -30,10 +30,11 @@ export type Media = {
   dpr?: number;
   video?: HTMLVideoElement | null;
   canvas?: HTMLCanvasElement | null;
-  mediaStream?: MediaStream;
+  mediaStream?: MediaStream | null;
   canvasCtx?: CanvasRenderingContext2D;
-  canvasStream?: MediaStream;
-  animationFrameId?: number;
+  canvasStream?: MediaStream | null;
+  animationFrameId?: number | null;
+  processedVideo?: HTMLVideoElement | null;
 };
 
 export type Record = {
