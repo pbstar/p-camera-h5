@@ -7,8 +7,6 @@
 
 一款轻量级 H5 相机插件，支持拍照、录像、文字图片水印，适配现代浏览器，为 Web 应用提供原生级摄像头体验。
 
----
-
 ## ✨ 核心特性
 
 - **即时捕获**  
@@ -19,8 +17,6 @@
   ⚡ 极简 API 设计、不依赖任何外部库
 - **跨平台**  
   🌍 完整适配桌面端与移动端浏览器
-
----
 
 ## 📦 安装
 
@@ -36,8 +32,6 @@ npm install p-camera-h5 --save
 <script src="https://unpkg.com/p-camera-h5@latest/dist/p-camera-h5.umd.js"></script>
 ```
 
----
-
 ## 🚀 快速接入
 
 ```html
@@ -46,7 +40,7 @@ npm install p-camera-h5 --save
 
 ```javascript
 import pCameraH5 from "p-camera-h5";
-
+// 初始化
 const camera = new pCameraH5({
   el: document.querySelector("#el"), // 容器选择器
   watermark: [
@@ -57,9 +51,23 @@ const camera = new pCameraH5({
     },
   ],
 });
+// 拍照
+camera.capture().then((file) => {
+  // 处理照片文件
+  console.log(file);
+});
+// 录像
+camera.startRecording().then((isSuccess) => {
+  if (isSuccess) {
+    // 开始录像
+  }
+});
+// 停止录像
+camera.stopRecording().then((file) => {
+  // 处理视频文件
+  console.log(file);
+});
 ```
-
----
 
 ## ⚙️ 配置项
 
@@ -96,20 +104,16 @@ const camera = new pCameraH5({
 | `width`  | number | 100    | 图片宽度(px) |
 | `height` | number | 100    | 图片高度(px) |
 
----
-
 ## 📚 API 方法
 
-| 方法               | 说明                 | 返回值        | 示例                      |
-| ------------------ | -------------------- | ------------- | ------------------------- |
-| `capture()`        | 拍摄照片             | Promise<File> | `camera.capture()`        |
-| `startRecording()` | 开始录像             | void          | `camera.startRecording()` |
-| `stopRecording()`  | 停止录像             | Promise<File> | `camera.stopRecording()`  |
-| `destroy()`        | 销毁实例（释放资源） | void          | `camera.destroy()`        |
+| 方法               | 说明                 | 返回值           | 示例                      |
+| ------------------ | -------------------- | ---------------- | ------------------------- |
+| `capture()`        | 拍摄照片             | Promise<File>    | `camera.capture()`        |
+| `startRecording()` | 开始录像             | Promise<boolean> | `camera.startRecording()` |
+| `stopRecording()`  | 停止录像             | Promise<File>    | `camera.stopRecording()`  |
+| `destroy()`        | 销毁实例（释放资源） | void             | `camera.destroy()`        |
 
-注意：`capture()` 和 `stopRecording()` 方法返回的是 Promise 对象，需要使用 `await` 或 `.then()` 来获取结果。
-
----
+注意：`capture()`, `startRecording()` 和 `stopRecording()` 方法返回的是 Promise 对象，需要使用 `await` 或 `.then()` 来获取结果。
 
 ## 🚨 重要说明
 
@@ -119,8 +123,6 @@ const camera = new pCameraH5({
    首次使用需用户授权摄像头和麦克风权限
 3. **格式说明**  
    录像实际输出为 WEBM 格式，MP4 下载通过自动转换实现
-
----
 
 ## 🛠️ 开发构建
 

@@ -74,14 +74,17 @@
       });
       recordBtn.addEventListener("click", () => {
         if (recordBtn.textContent === "录像") {
-          camera.startRecording();
-          recordBtn.textContent = "结束（0s）";
-          recordBtn.style.backgroundColor = "#dc3545";
-          let time = 0;
-          timer = setInterval(() => {
-            time++;
-            recordBtn.textContent = "结束（" + time + "s）";
-          }, 1000);
+          camera.startRecording().then((isSuccess) => {
+            if (isSuccess) {
+              recordBtn.textContent = "结束（0s）";
+              recordBtn.style.backgroundColor = "#dc3545";
+              let time = 0;
+              timer = setInterval(() => {
+                time++;
+                recordBtn.textContent = "结束（" + time + "s）";
+              }, 1000);
+            }
+          });
         } else {
           camera.stopRecording().then((file) => {
             download(file);

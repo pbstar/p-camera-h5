@@ -37,17 +37,20 @@ class pCameraH5 {
     };
     // 开始录像
     this.startRecording = () => {
-      if (this.#record.recorder) return console.error("已在录像");
-      this.#record.chunks = [];
-      if (!this.#media.canvasStream) return console.error("请先初始化");
-      this.#record.recorder = new MediaRecorder(this.#media.canvasStream);
-      this.#record.recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          if (!this.#record.chunks) this.#record.chunks = [];
-          this.#record.chunks.push(e.data);
-        }
-      };
-      this.#record.recorder.start();
+      return new Promise((resolve, reject) => {
+        if (this.#record.recorder) return console.error("已在录像");
+        this.#record.chunks = [];
+        if (!this.#media.canvasStream) return console.error("请先初始化");
+        this.#record.recorder = new MediaRecorder(this.#media.canvasStream);
+        this.#record.recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            if (!this.#record.chunks) this.#record.chunks = [];
+            this.#record.chunks.push(e.data);
+          }
+        };
+        this.#record.recorder.start();
+        resolve(true);
+      });
     };
     // 停止录像
     this.stopRecording = () => {
