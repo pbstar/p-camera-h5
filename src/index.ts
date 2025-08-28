@@ -1,7 +1,7 @@
 import { CameraOptions, Media, Record } from "./types";
 import { elTemplate } from "./constants";
 import { setupCamera } from "./media";
-import { base64ToFile, blobToFile, deepMerge, error } from "./utils";
+import { base64ToFile, blobToFile, deepMerge } from "./utils";
 
 class pCameraH5 {
   #config: CameraOptions;
