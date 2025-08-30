@@ -114,41 +114,10 @@ const createProcessedStream = (media: any, config: any) => {
         drawVideoFrame(videoElement, media, config);
       })
       .catch((err) => {
-        if (err.name === "NotAllowedError") {
-          showPlayButton(videoElement, media, config);
-        } else {
-          error("Error playing video: " + err.message);
-        }
+        error("Error playing video: " + err.message);
       });
   };
   return processedStream;
-};
-
-// 显示播放按钮
-const showPlayButton = (
-  videoElement: HTMLVideoElement,
-  media: any,
-  config: any
-) => {
-  const container = document.getElementById("p-camera-h5");
-  if (!container) return;
-  const btn = document.createElement("button");
-  btn.textContent = "点击授权相机";
-  btn.style.cssText =
-    "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:10px 20px;background:#007bff;color:white;border:none;border-radius:4px;cursor:pointer;z-index:121;";
-  btn.onclick = () => {
-    videoElement
-      .play()
-      .then(() => {
-        drawVideoFrame(videoElement, media, config);
-        container.removeChild(btn);
-      })
-      .catch((err) => {
-        error("Error playing video: " + err.message);
-        container.removeChild(btn);
-      });
-  };
-  container.appendChild(btn);
 };
 // 绘制视频帧
 const drawVideoFrame = (v: any, media: any, config: any) => {
