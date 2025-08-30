@@ -39,6 +39,6 @@ export const elTemplate = `
   <div id="p-camera-h5">
     <div id="p-loading">加载中...</div>
     <div id="p-error"></div>
-    <video id="p-video" autoplay playsinline></video>
+    <video id="p-video" autoplay playsinline muted></video>
   </div>
 `;

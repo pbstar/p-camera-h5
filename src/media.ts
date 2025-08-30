@@ -11,7 +11,11 @@ export const setupCamera = async (media: any, config: any) => {
       video: {
         facingMode: config.facingMode || "environment",
       },
-      audio: config.isAudio,
+      audio: config.isAudio ? {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      } : false,
     });
     // 初始化canvasCtx
     media.canvasCtx = media.canvas.getContext("2d", {
@@ -105,7 +109,7 @@ const createProcessedStream = (media: any, config: any) => {
   const videoElement = document.createElement("video");
   media.processedVideo = videoElement;
   videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
-  videoElement.muted = true;
+  videoElement.muted = true; // 必须静音以避免音频回路
   videoElement.playsInline = true;
   videoElement.onloadedmetadata = () => {
     videoElement
