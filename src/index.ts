@@ -14,6 +14,17 @@ import {
   showError,
 } from "./utils";
 
+// 类型从入口导出，供消费方 `import type { ... } from "p-camera-h5"` 使用
+export type {
+  CameraController,
+  CameraOptions,
+  ResolvedOptions,
+  Watermark,
+  WatermarkText,
+  WatermarkImage,
+  FacingMode,
+} from "./types";
+
 /** 校验并合并配置默认值 */
 const resolveConfig = (options: CameraOptions): ResolvedOptions => {
   if (!options || !options.el || !(options.el instanceof HTMLElement)) {
