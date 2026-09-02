@@ -1,8 +1,29 @@
+import type { Resolution } from "./types";
+
 /** 默认摄像头朝向（后置） */
 export const DEFAULT_FACING_MODE = "environment";
 
+/** 分辨率预设对应的理想宽高（ideal 软约束，设备不支持时浏览器自动降级） */
+export const RESOLUTION_PRESETS: Record<Resolution, { width: number; height: number }> = {
+  "480p": { width: 640, height: 480 },
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
+};
+
+/** 默认摄像头分辨率预设 */
+export const DEFAULT_RESOLUTION: Resolution = "720p";
+
+/** 默认 JPEG 拍照质量 */
+export const DEFAULT_JPEG_QUALITY = 0.92;
+
 /** 默认文字水印颜色 */
 export const DEFAULT_TEXT_COLOR = "rgba(255, 255, 255, 0.5)";
+
+/** 默认水印 x 坐标（px） */
+export const DEFAULT_WATERMARK_X = 10;
+
+/** 默认水印 y 坐标（px） */
+export const DEFAULT_WATERMARK_Y = 28;
 
 /** 默认文字水印字号（px） */
 export const DEFAULT_FONT_SIZE = 18;

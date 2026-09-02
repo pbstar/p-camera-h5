@@ -1,17 +1,18 @@
 {
   "name": "p-camera-h5",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0-beta.2",
   "description": "轻量级 H5 相机插件，支持拍照、录像、文字与图片水印",
-  "main": "./lib/p-camera-h5.es.js",
+  "main": "./lib/p-camera-h5.umd.cjs",
   "browser": "./lib/p-camera-h5.umd.js",
   "unpkg": "./lib/p-camera-h5.umd.js",
+  "module": "./lib/p-camera-h5.es.js",
   "type": "module",
   "types": "./lib/index.d.ts",
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
       "import": "./lib/p-camera-h5.es.js",
-      "require": "./lib/p-camera-h5.umd.js"
+      "require": "./lib/p-camera-h5.umd.cjs"
     }
   },
   "files": [

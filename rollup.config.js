@@ -26,7 +26,16 @@ export default {
       banner,
     },
     {
+      // CDN <script> 用（unpkg 对 .cjs 的 MIME 无保证，保留 .js）
       file: "lib/p-camera-h5.umd.js",
+      format: "umd",
+      name: "pCameraH5",
+      exports: "named",
+      banner,
+    },
+    {
+      // Node require 用：包声明了 "type": "module"，CJS 产物必须用 .cjs 后缀
+      file: "lib/p-camera-h5.umd.cjs",
       format: "umd",
       name: "pCameraH5",
       exports: "named",

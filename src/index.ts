@@ -1,15 +1,23 @@
 import type {
   CameraController,
   CameraOptions,
+  CaptureOptions,
   ResolvedOptions,
 } from "./types";
-import { DEFAULT_FACING_MODE, elTemplate } from "./constants";
-import { setupCamera, destroyCamera, type CameraEngine } from "./media";
+import {
+  DEFAULT_FACING_MODE,
+  DEFAULT_RESOLUTION,
+  RESOLUTION_PRESETS,
+  elTemplate,
+} from "./constants";
+import { setupCamera, destroyCamera, switchFacingCamera, type CameraEngine } from "./media";
 import {
   blobToFile,
   describeMediaError,
+  extFromImageMime,
   extFromMime,
   pickRecordingMime,
+  resolveCaptureFormat,
   setLoading,
   showError,
 } from "./utils";
@@ -18,11 +26,13 @@ import {
 export type {
   CameraController,
   CameraOptions,
+  CaptureOptions,
   ResolvedOptions,
   Watermark,
   WatermarkText,
   WatermarkImage,
   FacingMode,
+  Resolution,
 } from "./types";
 
 /** 校验并合并配置默认值 */
@@ -34,9 +44,14 @@ const resolveConfig = (options: CameraOptions): ResolvedOptions => {
   if (facingMode !== "user" && facingMode !== "environment") {
     throw new Error('[p-camera-h5] facingMode 仅支持 "user" 或 "environment"');
   }
+  const resolution = options.resolution ?? DEFAULT_RESOLUTION;
+  if (!(resolution in RESOLUTION_PRESETS)) {
+    throw new Error('[p-camera-h5] resolution 仅支持 "480p" / "720p" / "1080p"');
+  }
   return {
     el: options.el,
     facingMode,
+    resolution,
     isAudio: options.isAudio ?? false,
     isMirror: options.isMirror ?? false,
     watermark: options.watermark ?? null,
@@ -73,20 +88,28 @@ export const createCamera = async (
   let recorder: MediaRecorder | null = null;
   let chunks: Blob[] = [];
   let recording = false;
+  let paused = false;
+  // destroy 时用于拒绝尚在等待 onstop 的 stopRecording 调用，避免调用方永久挂起
+  let rejectPendingStop: ((err: Error) => void) | null = null;
 
   const ensureAlive = (): CameraEngine => {
     if (!engine) throw new Error("[p-camera-h5] 相机实例已销毁");
     return engine;
   };
 
-  /** 拍照，返回 PNG 图片文件 */
-  const capture = (): Promise<File> =>
+  /** 拍照，返回图片文件（默认 JPEG，可指定 PNG） */
+  const capture = (options?: CaptureOptions): Promise<File> =>
     new Promise((resolve, reject) => {
       const current = ensureAlive();
-      current.canvas.toBlob((blob) => {
-        if (blob) resolve(blobToFile(blob, "png"));
-        else reject(new Error("[p-camera-h5] 生成图片失败"));
-      }, "image/png");
+      const { mime, quality } = resolveCaptureFormat(options?.type);
+      current.canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blobToFile(blob, extFromImageMime(mime)));
+          else reject(new Error("[p-camera-h5] 生成图片失败"));
+        },
+        mime,
+        quality
+      );
     });
 
   /** 开始录像 */
@@ -108,6 +131,7 @@ export const createCamera = async (
       };
       recorder.start();
       recording = true;
+      paused = false;
       resolve();
     });
 
@@ -120,12 +144,49 @@ export const createCamera = async (
         const type = current.mimeType || "video/webm";
         const blob = new Blob(chunks, { type });
         recording = false;
+        paused = false;
         recorder = null;
         chunks = [];
+        rejectPendingStop = null;
         resolve(blobToFile(blob, extFromMime(type)));
       };
+      // 销毁时 rejectPendingStop 会被调用，避免 Promise 永久挂起
+      rejectPendingStop = reject;
       current.stop();
     });
+
+  /** 暂停录像，画面照常渲染，仅暂停内容写入 */
+  const pauseRecording = (): void => {
+    if (!recording || !recorder) {
+      throw new Error("[p-camera-h5] 未开始录像");
+    }
+    if (paused) return; // 幂等
+    recorder.pause();
+    paused = true;
+  };
+
+  /** 恢复已暂停的录像 */
+  const resumeRecording = (): void => {
+    if (!recording || !recorder) {
+      throw new Error("[p-camera-h5] 未开始录像");
+    }
+    if (!paused) return; // 幂等
+    recorder.resume();
+    paused = false;
+  };
+
+  /** 是否正在录像（暂停中也算录像中） */
+  const isRecording = (): boolean => recording;
+
+  /** 切换前后摄像头，录像中的画面会随之切换且录像不中断 */
+  const switchFacing = async (): Promise<void> => {
+    const current = ensureAlive();
+    try {
+      await switchFacingCamera(current);
+    } catch (err) {
+      throw describeMediaError(err);
+    }
+  };
 
   /** 销毁实例，释放全部资源 */
   const destroy = (): void => {
@@ -137,12 +198,25 @@ export const createCamera = async (
     recording = false;
     recorder = null;
     chunks = [];
+    if (rejectPendingStop) {
+      rejectPendingStop(new Error("[p-camera-h5] 相机实例已销毁，录像终止"));
+      rejectPendingStop = null;
+    }
     destroyCamera(engine);
     el.innerHTML = "";
     engine = null;
   };
 
-  return { capture, startRecording, stopRecording, destroy };
+  return {
+    capture,
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording,
+    isRecording,
+    switchFacing,
+    destroy,
+  };
 };
 
 export default createCamera;

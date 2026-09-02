@@ -2,6 +2,25 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.0.0-beta.2](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.1...v3.0.0-beta.2) - 2026-09-02
+
+### ⚠ 破坏性变更（相对 beta.1）
+
+- 水印配置统一为对象形式：定位（`x`/`y`）在外层，内容与样式收进 `text: { content, color, fontSize }` / `img: { url, width, height }` 对象，不再支持 `text`/`img` 的字符串简写
+
+### 新增
+
+- 新增 `resolution` 配置，分辨率预设 `480p` / `720p` / `1080p`（默认 `720p`），解决默认 640×480 导致拍照/录像模糊的问题；设备不支持时自动降级
+- `capture()` 支持指定图片格式：默认输出 JPEG（内部固定质量 0.92，体积远小于 PNG），可传 `{ type: "image/png" }`
+- 文字水印 `text.content` 支持传函数，每帧求值，可用于时间等动态水印
+- 新增录像控制：`pauseRecording()` / `resumeRecording()` / `isRecording()`
+- 新增 `switchFacing()`，运行时切换前后摄像头，录像不中断；目标朝向不可用时 reject 且画面不受影响
+
+### 修复
+
+- 修复 CJS 入口损坏的问题：包声明 `"type": "module"` 后，`require` 指向的 `.js` UMD 产物被当作 ESM 解析，导致返回空对象；`require` 条件改为指向 `.cjs` 产物（新增构建输出 `p-camera-h5.umd.cjs`），并补充 `module` 字段
+- 修复销毁时若有 `stopRecording()` 尚在等待结果会永久挂起的问题，改为 reject
+
 ## [3.0.0-beta.1](https://github.com/pbstar/p-camera-h5/compare/v2.0.3...v3.0.0-beta.1) - 2026-08-31
 
 ### ⚠ 破坏性变更
