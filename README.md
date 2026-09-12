@@ -1,135 +1,176 @@
 # p-camera-h5 📷
 
-[![GitHub License](https://img.shields.io/github/license/pbstar/p-camera-h5?style=flat&color=109BCD)](https://github.com/pbstar/p-camera-h5)
-[![NPM Version](https://img.shields.io/npm/v/p-camera-h5?style=flat&color=d4b106)](https://www.npmjs.com/package/p-camera-h5)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/p-camera-h5?style=flat&color=41B883)](https://bundlephobia.com/package/p-camera-h5)
-[![Demo](https://img.shields.io/badge/在线示例-FF5722?style=flat)](https://pbstar.github.io/p-camera-h5-demo/)
+轻量级 H5 相机插件，基于 `getUserMedia` 与 `MediaRecorder` 实现，支持拍照、录像、文字与图片水印，适配现代桌面端与移动端浏览器。
 
-一款轻量级 H5 相机插件，支持拍照、录像、文字图片水印，适配现代浏览器，为 Web 应用提供原生级摄像头体验。
+## 特性
 
-## ✨ 核心特性
+- **拍照**：`capture()` 输出 JPEG
+- **录像**：`startRecording()` / `stopRecording()`，支持暂停/恢复与状态查询，自动按浏览器能力选择 `mp4` / `webm` 格式
+- **切换摄像头**：`switchFacing()` 运行时切换前后摄，录像不中断
+- **水印**：支持文字（内容、位置、颜色、字号，支持每帧求值的动态时间水印）与图片水印
+- **镜像**：`isMirror` 前置摄像头画面反转
+- **音频**：`isAudio` 开启麦克风录制
+- **类型安全**：原生 TypeScript 类型声明，构建时自动生成
+- **零运行时依赖**
 
-- **即时捕获**  
-  📸 拍照、🎥 录像
-- **水印**  
-  🖼️ 支持文字内容、位置、颜色、字体大小、图片等
-- **无缝集成**  
-  ⚡ 极简 API 设计、不依赖任何外部库
-- **跨平台**  
-  🌍 完整适配桌面端与移动端浏览器
+## 安装
 
-## 📦 安装
-
-### NPM
+### npm
 
 ```bash
-npm install p-camera-h5 --save
+npm install p-camera-h5
+```
+
+```javascript
+import { createCamera } from "p-camera-h5";
+// 或使用默认导出
+import createCamera from "p-camera-h5";
 ```
 
 ### CDN
 
 ```html
-<script src="https://unpkg.com/p-camera-h5@latest/dist/p-camera-h5.umd.js"></script>
+<script src="https://unpkg.com/p-camera-h5@latest/lib/p-camera-h5.umd.js"></script>
+<script>
+  pCameraH5.createCamera({ el: document.getElementById("el") });
+</script>
 ```
 
-## 🚀 快速接入
+> UMD 构建的全局变量名为 `pCameraH5`。
+
+## 快速开始
 
 ```html
 <div id="el" style="width: 300px; height: 500px"></div>
 ```
 
 ```javascript
-import pCameraH5 from "p-camera-h5";
-// 初始化
-const camera = new pCameraH5({
-  el: document.querySelector("#el"), // 容器选择器
+import { createCamera } from "p-camera-h5";
+
+const camera = await createCamera({
+  el: document.getElementById("el"),
+  facingMode: "environment", // 后置摄像头
+  isMirror: false,
+  isAudio: false,
   watermark: [
-    {
-      x: 10,
-      y: 10,
-      text: "p-camera-h5",
-    },
+    { x: 10, y: 28, text: { content: "p-camera-h5" } },
+    // 动态时间水印：content 传函数，每帧求值
+    { x: 10, y: 58, text: { content: () => new Date().toLocaleString(), color: "#fff", fontSize: 20 } },
   ],
 });
-// 拍照
-camera.capture().then((file) => {
-  // 处理照片文件
-  console.log(file);
-});
+
+// 拍照（JPEG）
+const photo = await camera.capture();
+
 // 录像
-camera.startRecording().then((isSuccess) => {
-  if (isSuccess) {
-    // 开始录像
-  }
-});
-// 停止录像
-camera.stopRecording().then((file) => {
-  // 处理视频文件
-  console.log(file);
-});
+await camera.startRecording();
+camera.pauseRecording();
+camera.resumeRecording();
+camera.isRecording(); // => true
+const video = await camera.stopRecording();
+
+// 切换前后摄像头（录像中也可调用，画面切换且录像不中断）
+await camera.switchFacing();
+
+// 销毁
+camera.destroy();
 ```
 
-## ⚙️ 配置项
+## 配置项
 
-| 参数         | 类型        | 默认值        | 说明                                      |
-| ------------ | ----------- | ------------- | ----------------------------------------- |
-| `el`         | HTMLElement | **必填**      | 挂载容器元素                              |
-| `facingMode` | string      | `environment` | 摄像头方向，默认后置，可选 `user`（前置） |
-| `isAudio`    | boolean     | `false`       | 是否开启音频录制，默认关闭                |
-| `isMirror`   | boolean     | `false`       | 是否镜像反转，默认关闭                    |
-| `watermark`  | Watermark[] | null          | 水印配置对象数组                          |
+`createCamera(options)` 接收以下配置项：
 
-水印配置对象说明：
+| 参数         | 类型          | 默认值        | 说明                                      |
+| ------------ | ------------- | ------------- | ----------------------------------------- |
+| `el`         | `HTMLElement` | 必填          | 挂载容器元素                              |
+| `facingMode` | `string`      | `environment` | 摄像头方向：`user`（前置）/ `environment`（后置） |
+| `isAudio`    | `boolean`     | `false`       | 是否开启麦克风录制                        |
+| `isMirror`   | `boolean`     | `false`       | 是否镜像反转画面（前置摄像头常用）        |
+| `watermark`  | `Watermark[]` | `null`        | 水印配置数组，详见下方说明                |
 
-| 参数   | 类型                      | 默认值 | 说明                       |
-| ------ | ------------------------- | ------ | -------------------------- |
-| `x`    | number                    | 10     | 水印 x 坐标                |
-| `y`    | number                    | 28     | 水印 y 坐标                |
-| `text` | WatermarkText{} / string  | -      | 文字水印配置对象或字符串   |
-| `img`  | WatermarkImage{} / string | -      | 图片水印配置对象或图片 URL |
+### 水印配置
 
-文字水印配置对象说明：
+每条水印用 `x`/`y` 定位，`text` 与 `img` 二选一（均为对象）：
 
-| 参数       | 类型   | 默认值                     | 说明         |
-| ---------- | ------ | -------------------------- | ------------ |
-| `text`     | string | -                          | 文字内容     |
-| `fontSize` | number | 18                         | 字体大小(px) |
-| `color`    | string | `rgba(255, 255, 255, 0.5)` | 字体颜色     |
+| 参数   | 类型             | 默认值 | 说明      |
+| ------ | ---------------- | ------ | --------- |
+| `x`    | `number`         | `10`   | 水印 x 坐标（px） |
+| `y`    | `number`         | `28`   | 水印 y 坐标（px） |
+| `text` | `WatermarkText`  | -      | 文字水印  |
+| `img`  | `WatermarkImage` | -      | 图片水印  |
 
-图片水印配置对象说明：
+文字水印 `WatermarkText`：
 
-| 参数     | 类型   | 默认值 | 说明         |
-| -------- | ------ | ------ | ------------ |
-| `url`    | string | -      | 图片 URL     |
-| `width`  | number | 100    | 图片宽度(px) |
-| `height` | number | 100    | 图片高度(px) |
+| 参数       | 类型                        | 默认值                     | 说明                                           |
+| ---------- | --------------------------- | -------------------------- | ---------------------------------------------- |
+| `content`  | `string` \| `() => string`  | 必填                       | 文字内容；传函数时每帧求值，适合时间等动态水印 |
+| `color`    | `string`                    | `rgba(255, 255, 255, 0.5)` | 字体颜色                                       |
+| `fontSize` | `number`                    | `18`                       | 字号（px）                                     |
 
-## 📚 API 方法
+图片水印 `WatermarkImage`：
 
-| 方法               | 说明                 | 返回值           | 示例                      |
-| ------------------ | -------------------- | ---------------- | ------------------------- |
-| `capture()`        | 拍摄照片             | Promise<File>    | `camera.capture()`        |
-| `startRecording()` | 开始录像             | Promise<boolean> | `camera.startRecording()` |
-| `stopRecording()`  | 停止录像             | Promise<File>    | `camera.stopRecording()`  |
-| `destroy()`        | 销毁实例（释放资源） | void             | `camera.destroy()`        |
+| 参数     | 类型     | 默认值 | 说明          |
+| -------- | -------- | ------ | ------------- |
+| `url`    | `string` | 必填   | 图片 URL      |
+| `width`  | `number` | `100`  | 图片宽度（px）|
+| `height` | `number` | `100`  | 图片高度（px）|
 
-注意：`capture()`, `startRecording()` 和 `stopRecording()` 方法返回的是 Promise 对象，需要使用 `await` 或 `.then()` 来获取结果。
+```javascript
+watermark: [
+  // 文字水印
+  { x: 10, y: 28, text: { content: "p-camera-h5" } },
+  // 动态时间水印：content 传函数，每帧求值
+  { x: 10, y: 58, text: { content: () => new Date().toLocaleString(), color: "#fff", fontSize: 20 } },
+  // 图片水印
+  { x: 10, y: 88, img: { url: "https://example.com/logo.png", width: 120, height: 40 } },
+]
+```
 
-## 🚨 重要说明
+> 图片水印需服务端允许跨域（CORS），单张加载失败仅告警跳过，不影响相机初始化。
 
-1. **安全协议**  
-   需在 HTTPS 环境或 localhost 下运行（浏览器安全策略要求）
-2. **权限管理**  
-   首次使用需用户授权摄像头和麦克风权限
-3. **格式说明**  
-   录像实际输出为 WEBM 格式，MP4 下载通过自动转换实现
+## 控制器方法
 
-## 🛠️ 开发构建
+`createCamera` 返回控制器对象，提供以下方法：
+
+| 方法                          | 说明                           | 返回值           |
+| ----------------------------- | ------------------------------ | ---------------- |
+| `capture()`                   | 拍照，输出 JPEG                | `Promise<File>`  |
+| `startRecording()`            | 开始录像                       | `Promise<void>`  |
+| `stopRecording()`             | 停止录像                       | `Promise<File>`  |
+| `pauseRecording()`            | 暂停录像                       | `void`           |
+| `resumeRecording()`           | 恢复录像                       | `void`           |
+| `isRecording()`               | 是否正在录像（暂停中也算）     | `boolean`        |
+| `switchFacing()`              | 切换前后摄像头，录像不中断     | `Promise<void>`  |
+| `destroy()`                   | 销毁实例，释放资源             | `void`           |
+
+所有 Promise 方法在相机未就绪或已销毁时会 reject，调用方需捕获错误。
+
+## 重要说明
+
+1. **安全协议**：需在 HTTPS 或 `localhost` 环境运行（浏览器安全策略要求）。
+2. **权限管理**：首次使用需用户授权摄像头 / 麦克风权限；拒绝授权时 `createCamera` 会 reject。
+3. **录像格式**：`stopRecording()` 返回的 `File` 扩展名与 MIME 一致——Safari 等支持 `mp4` 的浏览器输出 `mp4`，其余输出 `webm`。
+4. **切换摄像头**：`switchFacing()` 需设备存在两个摄像头；设备只有一个时（或目标朝向不可用）会 reject，当前画面不受影响。
+5. **销毁后重建**：`destroy()` 会清空容器内容；需再次使用时请重新调用 `createCamera`。
+
+## 从 v2 迁移
+
+v3 相对 v2 的主要变更：
+
+- API 由类实例 `new pCameraH5()` 改为工厂函数 `createCamera()`，返回 `Promise`。
+- 移除内置按钮与默认水印，容器只渲染视频层。
+- 水印配置统一为对象形式：定位（`x`/`y`）在外层，内容与样式收进 `text`/`img` 对象，不再支持字符串简写。
+- 错误处理由 `console.error` 改为 reject / throw，便于调用方捕获。
+- 拍照输出格式由 PNG 改为 JPEG。
+- 录像文件扩展名与真实 MIME 对齐，不再将 `webm` 内容命名为 `mp4`。
+- 移除未使用的构建依赖（`rollup-plugin-json`、`rollup-plugin-postcss`）。
+
+## 开发构建
 
 ```bash
-git clone https://github.com/pbstar/p-camera-h5.git
 npm install
-npm run build
+npm run build   # 生成 lib 产物与类型声明
+npm run dev     # 启动本地示例服务
 ```
 
-欢迎通过 [Issues](https://github.com/pbstar/p-camera-h5/issues) 提交建议或贡献代码！🚀
+构建产物输出到 `lib/` 目录，已加入 `.gitignore`。

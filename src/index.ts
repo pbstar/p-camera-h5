@@ -1,131 +1,211 @@
-import { CameraOptions, Media, Record } from "./types";
-import { elTemplate } from "./constants";
-import { setupCamera } from "./media";
-import { base64ToFile, blobToFile, deepMerge } from "./utils";
+import type {
+  CameraController,
+  CameraOptions,
+  ResolvedOptions,
+} from "./types";
+import {
+  DEFAULT_FACING_MODE,
+  DEFAULT_JPEG_QUALITY,
+  elTemplate,
+} from "./constants";
+import { setupCamera, destroyCamera, switchFacingCamera, type CameraEngine } from "./media";
+import {
+  blobToFile,
+  describeMediaError,
+  extFromMime,
+  pickRecordingMime,
+  setLoading,
+  showError,
+} from "./utils";
 
-class pCameraH5 {
-  #config: CameraOptions;
-  #media: Media = {};
-  #record: Record = {};
-  capture: Function;
-  startRecording: Function;
-  stopRecording: Function;
-  destroy: Function;
-  constructor(options: CameraOptions) {
-    const config = {
-      el: null,
-      facingMode: "environment", // "user" | "environment"
-      isAudio: false,
-      isMirror: false,
-      watermark: [
-        {
-          x: 10,
-          y: 28,
-          text: "p-camera-h5",
+// 类型从入口导出，供消费方 `import type { ... } from "p-camera-h5"` 使用
+export type {
+  CameraController,
+  CameraOptions,
+  ResolvedOptions,
+  Watermark,
+  WatermarkText,
+  WatermarkImage,
+  FacingMode,
+} from "./types";
+
+/** 校验并合并配置默认值 */
+const resolveConfig = (options: CameraOptions): ResolvedOptions => {
+  if (!options || !options.el || !(options.el instanceof HTMLElement)) {
+    throw new Error("[p-camera-h5] options.el 必须为有效的 HTMLElement");
+  }
+  const facingMode = options.facingMode ?? DEFAULT_FACING_MODE;
+  if (facingMode !== "user" && facingMode !== "environment") {
+    throw new Error('[p-camera-h5] facingMode 仅支持 "user" 或 "environment"');
+  }
+  return {
+    el: options.el,
+    facingMode,
+    isAudio: options.isAudio ?? false,
+    isMirror: options.isMirror ?? false,
+    watermark: options.watermark ?? null,
+  };
+};
+
+/**
+ * 创建相机实例。
+ * 初始化异步（需打开摄像头），成功后返回控制器；失败时 reject 并展示错误提示。
+ */
+export const createCamera = async (
+  options: CameraOptions
+): Promise<CameraController> => {
+  const config = resolveConfig(options);
+  const { el } = config;
+
+  // 渲染模板
+  el.innerHTML = elTemplate;
+  const container = el.querySelector(".p-camera-h5") as HTMLElement | null;
+  if (!container) throw new Error("[p-camera-h5] 模板渲染异常：未找到 .p-camera-h5 容器");
+
+  setLoading(container, true);
+  let engine: CameraEngine | null = null;
+  try {
+    engine = await setupCamera(config, container);
+  } catch (err) {
+    const error = describeMediaError(err);
+    showError(container, error.message);
+    throw error;
+  } finally {
+    setLoading(container, false);
+  }
+
+  // 录像运行时状态
+  let recorder: MediaRecorder | null = null;
+  let chunks: Blob[] = [];
+  let recording = false;
+  let paused = false;
+  // destroy 时用于拒绝尚在等待 onstop 的 stopRecording 调用，避免调用方永久挂起
+  let rejectPendingStop: ((err: Error) => void) | null = null;
+
+  const ensureAlive = (): CameraEngine => {
+    if (!engine) throw new Error("[p-camera-h5] 相机实例已销毁");
+    return engine;
+  };
+
+  /** 拍照，返回 JPEG 图片文件 */
+  const capture = (): Promise<File> =>
+    new Promise((resolve, reject) => {
+      const current = ensureAlive();
+      current.canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blobToFile(blob, "jpg"));
+          else reject(new Error("[p-camera-h5] 生成图片失败"));
         },
-      ],
-    };
-    this.#config = deepMerge(config, options);
-    this.#init();
-    // 拍照
-    this.capture = () => {
-      return new Promise((resolve, reject) => {
-        if (!this.#media.canvas) return console.error("请先初始化");
-        const img = this.#media.canvas.toDataURL("image/png");
-        resolve(base64ToFile(img, "png"));
-      });
-    };
-    // 开始录像
-    this.startRecording = () => {
-      return new Promise((resolve, reject) => {
-        if (this.#record.recorder) return console.error("已在录像");
-        this.#record.chunks = [];
-        if (!this.#media.canvasStream) return console.error("请先初始化");
-        this.#record.recorder = new MediaRecorder(this.#media.canvasStream);
-        this.#record.recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            if (!this.#record.chunks) this.#record.chunks = [];
-            this.#record.chunks.push(e.data);
-          }
-        };
-        this.#record.recorder.start();
-        resolve(true);
-      });
-    };
-    // 停止录像
-    this.stopRecording = () => {
-      return new Promise((resolve, reject) => {
-        if (!this.#record.recorder) return console.error("未开始录像");
-        this.#record.recorder.onstop = () => {
-          const blob = new Blob(this.#record.chunks, {
-            type: "video/webm",
-          });
-          resolve(blobToFile(blob, "mp4"));
-        };
-        this.#record.recorder.stop();
-        this.#record.recorder = null;
-      });
-    };
-    // 销毁
-    this.destroy = () => {
-      if (!this.#config.el) return console.error("请先初始化");
-      // 停止动画帧
-      if (this.#media.animationFrameId) {
-        cancelAnimationFrame(this.#media.animationFrameId);
-        this.#media.animationFrameId = null;
-      }
-      // 停止并清理媒体流
-      if (this.#media.mediaStream) {
-        this.#media.mediaStream
-          .getTracks()
-          .forEach((track: any) => track.stop());
-        this.#media.mediaStream = null;
-      }
-      // 停止并清理画布流
-      if (this.#media.canvasStream) {
-        this.#media.canvasStream
-          .getTracks()
-          .forEach((track: any) => track.stop());
-        this.#media.canvasStream = null;
-      }
-      // 停止录像器
-      if (this.#record.recorder) {
-        this.#record.recorder.stop();
-        this.#record.recorder = null;
-      }
-      // 清理画布
-      if (this.#media.canvas) {
-        this.#media.canvas = null;
-      }
-      // 清理视频元素
-      if (this.#media.video) {
-        this.#media.video = null;
-      }
-      // 清理在 createProcessedStream 中创建的 video 元素
-      if (this.#media.processedVideo) {
-        this.#media.processedVideo.srcObject = null;
-        this.#media.processedVideo = null;
-      }
-      // 清空容器
-      this.#config.el.innerHTML = "";
-    };
-  }
-  // 初始化
-  async #init() {
-    if (!this.#config.el) return console.error("el is required");
-    this.#config.el.innerHTML = elTemplate;
-    this.#media.width = this.#config.el.clientWidth;
-    this.#media.height = this.#config.el.clientHeight;
-    this.#media.dpr = window.devicePixelRatio || 1;
-    const loading = document.getElementById("p-loading") as HTMLDivElement;
-    const canvas = document.createElement("canvas");
-    const video = document.getElementById("p-video") as HTMLVideoElement;
-    this.#media.canvas = canvas;
-    this.#media.video = video;
-    loading.style.display = "block";
-    await setupCamera(this.#media, this.#config);
-    loading.style.display = "none";
-  }
-}
+        "image/jpeg",
+        DEFAULT_JPEG_QUALITY
+      );
+    });
 
-export default pCameraH5;
+  /** 开始录像 */
+  const startRecording = (): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const current = ensureAlive();
+      if (recording) return reject(new Error("[p-camera-h5] 已在录像中"));
+      if (!current.canvasStream) {
+        return reject(new Error("[p-camera-h5] 媒体流未就绪"));
+      }
+      const mimeType = pickRecordingMime();
+      recorder =
+        mimeType !== ""
+          ? new MediaRecorder(current.canvasStream, { mimeType })
+          : new MediaRecorder(current.canvasStream);
+      chunks = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.start();
+      recording = true;
+      paused = false;
+      resolve();
+    });
+
+  /** 停止录像，返回视频文件 */
+  const stopRecording = (): Promise<File> =>
+    new Promise((resolve, reject) => {
+      if (!recorder) return reject(new Error("[p-camera-h5] 未开始录像"));
+      const current = recorder;
+      current.onstop = () => {
+        const type = current.mimeType || "video/webm";
+        const blob = new Blob(chunks, { type });
+        recording = false;
+        paused = false;
+        recorder = null;
+        chunks = [];
+        rejectPendingStop = null;
+        resolve(blobToFile(blob, extFromMime(type)));
+      };
+      // 销毁时 rejectPendingStop 会被调用，避免 Promise 永久挂起
+      rejectPendingStop = reject;
+      current.stop();
+    });
+
+  /** 暂停录像，画面照常渲染，仅暂停内容写入 */
+  const pauseRecording = (): void => {
+    if (!recording || !recorder) {
+      throw new Error("[p-camera-h5] 未开始录像");
+    }
+    if (paused) return; // 幂等
+    recorder.pause();
+    paused = true;
+  };
+
+  /** 恢复已暂停的录像 */
+  const resumeRecording = (): void => {
+    if (!recording || !recorder) {
+      throw new Error("[p-camera-h5] 未开始录像");
+    }
+    if (!paused) return; // 幂等
+    recorder.resume();
+    paused = false;
+  };
+
+  /** 是否正在录像（暂停中也算录像中） */
+  const isRecording = (): boolean => recording;
+
+  /** 切换前后摄像头，录像中的画面会随之切换且录像不中断 */
+  const switchFacing = async (): Promise<void> => {
+    const current = ensureAlive();
+    try {
+      await switchFacingCamera(current);
+    } catch (err) {
+      throw describeMediaError(err);
+    }
+  };
+
+  /** 销毁实例，释放全部资源 */
+  const destroy = (): void => {
+    if (!engine) return; // 幂等
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = null;
+      recorder.stop();
+    }
+    recording = false;
+    recorder = null;
+    chunks = [];
+    if (rejectPendingStop) {
+      rejectPendingStop(new Error("[p-camera-h5] 相机实例已销毁，录像终止"));
+      rejectPendingStop = null;
+    }
+    destroyCamera(engine);
+    el.innerHTML = "";
+    engine = null;
+  };
+
+  return {
+    capture,
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    resumeRecording,
+    isRecording,
+    switchFacing,
+    destroy,
+  };
+};
+
+export default createCamera;

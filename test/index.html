@@ -1,19 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>📷 pCameraH5</title>
     <style>
       .btns {
-        width: 360px;
+        width: 520px;
         display: flex;
         justify-content: center;
+        flex-wrap: wrap;
         margin-top: 20px;
       }
       .btns button {
-        margin: 0 10px;
+        margin: 5px 10px;
         padding: 10px 20px;
         border: none;
         border-radius: 5px;
@@ -24,14 +24,18 @@
       .btns button#destroy {
         background-color: #dc3545;
       }
+      .btns button#switch {
+        background-color: #28a745;
+      }
     </style>
   </head>
 
   <body>
-    <div id="el" style="width: 360px; height: 300px"></div>
+    <div id="el" style="width: 520px; height: 300px"></div>
     <div class="btns">
       <button id="capture">拍照</button>
       <button id="record">录像</button>
+      <button id="switch">切换摄像头</button>
       <button id="destroy">销毁</button>
     </div>
     <script src="../lib/p-camera-h5.umd.js"></script>
@@ -41,62 +45,76 @@
         const url = URL.createObjectURL(file);
         a.href = url;
         a.style.display = "none";
-        a.download = name ? name : file.name;
+        a.download = file.name;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       };
-      const camera = new pCameraH5({
-        el: document.querySelector("#el"),
-        isMirror: true,
-        watermark: [
-          {
-            x: 10,
-            y: 28,
-            text: "📷 pCameraH5",
-          },
-          {
-            x: 10,
-            y: 58,
-            text: "v2.0.0",
-          },
-        ],
-      });
-      const captureBtn = document.querySelector("#capture");
-      const recordBtn = document.querySelector("#record");
-      const destroyBtn = document.querySelector("#destroy");
-      let timer = null;
-      captureBtn.addEventListener("click", () => {
-        camera.capture().then((file) => {
-          download(file);
-        });
-      });
-      recordBtn.addEventListener("click", () => {
-        if (recordBtn.textContent === "录像") {
-          camera.startRecording().then((isSuccess) => {
-            if (isSuccess) {
-              recordBtn.textContent = "结束（0s）";
-              recordBtn.style.backgroundColor = "#dc3545";
-              let time = 0;
-              timer = setInterval(() => {
-                time++;
-                recordBtn.textContent = "结束（" + time + "s）";
-              }, 1000);
+      const two = (n) => String(n).padStart(2, "0");
+      const formatTime = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+      };
+
+      pCameraH5
+        .createCamera({
+          el: document.querySelector("#el"),
+          isMirror: true,
+          watermark: [
+            {
+              x: 10,
+              y: 28,
+              text: { content: "📷 pCameraH5" },
+            },
+            {
+              x: 10,
+              y: 58,
+              // 动态时间水印：传函数，每帧刷新
+              text: { content: formatTime, color: "#fff", fontSize: 16 },
+            },
+          ],
+        })
+        .then((camera) => {
+          const captureBtn = document.querySelector("#capture");
+          const recordBtn = document.querySelector("#record");
+          const switchBtn = document.querySelector("#switch");
+          const destroyBtn = document.querySelector("#destroy");
+          let timer = null;
+
+          captureBtn.addEventListener("click", () => {
+            camera.capture().then(download);
+          });
+          recordBtn.addEventListener("click", () => {
+            if (!camera.isRecording()) {
+              camera.startRecording().then(() => {
+                recordBtn.textContent = "结束（0s）";
+                recordBtn.style.backgroundColor = "#dc3545";
+                let time = 0;
+                timer = setInterval(() => {
+                  time++;
+                  recordBtn.textContent = "结束（" + time + "s）";
+                }, 1000);
+              });
+            } else {
+              camera.stopRecording().then((file) => {
+                download(file);
+                clearInterval(timer);
+                recordBtn.style.backgroundColor = "#007bff";
+                recordBtn.textContent = "录像";
+              });
             }
           });
-        } else {
-          camera.stopRecording().then((file) => {
-            download(file);
-            clearInterval(timer);
-            recordBtn.style.backgroundColor = "#007bff";
-            recordBtn.textContent = "录像";
+          switchBtn.addEventListener("click", () => {
+            camera.switchFacing().catch((err) => alert(err.message));
           });
-        }
-      });
-      destroyBtn.addEventListener("click", () => {
-        camera.destroy();
-      });
+          destroyBtn.addEventListener("click", () => {
+            camera.destroy();
+          });
+        })
+        .catch((err) => {
+          console.error(err);
+        });
     </script>
   </body>
 </html>

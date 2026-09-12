@@ -1,186 +1,211 @@
-import { error } from "./utils";
-export const setupCamera = async (media: any, config: any) => {
-  try {
-    // 设置Canvas大小
-    media.canvas.width = media.width * media.dpr;
-    media.canvas.height = media.height * media.dpr;
-    media.canvas.style.width = media.width + "px";
-    media.canvas.style.height = media.height + "px";
-    // 获取原始媒体流
-    media.mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: config.facingMode || "environment",
-      },
-      audio: config.isAudio ? {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      } : false,
-    });
-    // 初始化canvasCtx
-    media.canvasCtx = media.canvas.getContext("2d", {
-      alpha: false, // 关闭透明度提升渲染性能
-      willReadFrequently: false, // 关闭频繁读取提升渲染性能
-    });
-    media.canvasCtx.imageSmoothingQuality = "high";
-    media.canvasCtx.imageSmoothingEnabled = true;
-    // 处理水印数据
-    if (config.watermark) {
-      await handleWatermark(media, config);
-    }
-    // 创建带水印的视频流
-    media.canvasStream = createProcessedStream(media, config);
-    // 显示处理后的视频
-    media.video.srcObject = media.canvasStream;
-  } catch (e: any) {
-    return error("Error accessing media devices: " + e.message);
-  }
+import type { ResolvedOptions, FacingMode } from "./types";
+import { prepareWatermarks, drawWatermarks, type PreparedWatermark } from "./watermark";
+
+/** 相机运行时状态 */
+export interface CameraEngine {
+  /** 展示层的 video 元素（播放带水印的处理流） */
+  video: HTMLVideoElement;
+  /** 隐藏的原始流播放元素 */
+  processedVideo: HTMLVideoElement | null;
+  canvas: HTMLCanvasElement;
+  canvasCtx: CanvasRenderingContext2D;
+  /** 摄像头原始媒体流 */
+  mediaStream: MediaStream | null;
+  /** 带水印的合成画布流 */
+  canvasStream: MediaStream | null;
+  animationFrameId: number | null;
+  width: number;
+  height: number;
+  dpr: number;
+  watermarks: PreparedWatermark[] | null;
+  /** 运行时可变的相机状态，switchFacing 会更新 */
+  facingMode: FacingMode;
+  isAudio: boolean;
+  isMirror: boolean;
+}
+
+/** 打开指定朝向的摄像头流；exactFacing 为 true 时严格匹配朝向（用于主动切换） */
+const openStream = (
+  facingMode: FacingMode,
+  isAudio: boolean,
+  exactFacing = false
+): Promise<MediaStream> => {
+  // 720p（ideal 软约束：设备不支持时浏览器自动降级）
+  return navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: exactFacing ? { exact: facingMode } : facingMode,
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+    audio: isAudio
+      ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      : false,
+  });
 };
 
-// 处理水印数据
-const handleWatermark = async (media: any, config: any) => {
-  // 加载水印图片
-  const loadImage = (url: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = url + "?r=" + new Date().getTime();
-      img.onload = () => resolve(img);
-      img.onerror = (err) => reject(err);
-    });
+/** 打开摄像头并初始化画布与处理流 */
+export const setupCamera = async (
+  config: ResolvedOptions,
+  container: HTMLElement
+): Promise<CameraEngine> => {
+  const video = container.querySelector(
+    ".p-camera-video"
+  ) as HTMLVideoElement;
+  const canvas = document.createElement("canvas");
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+
+  // 画布按设备像素比放大，保证截图/录像清晰度
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+
+  const mediaStream = await openStream(config.facingMode, config.isAudio);
+
+  const canvasCtx = canvas.getContext("2d", {
+    alpha: false, // 关闭透明度提升渲染性能
+    willReadFrequently: false, // 关闭频繁读取提升渲染性能
+  }) as CanvasRenderingContext2D;
+  canvasCtx.imageSmoothingEnabled = true;
+  canvasCtx.imageSmoothingQuality = "high";
+
+  // 预加载并规范化水印
+  const watermarks = await prepareWatermarks(config.watermark);
+
+  const engine: CameraEngine = {
+    video,
+    processedVideo: null,
+    canvas,
+    canvasCtx,
+    mediaStream,
+    canvasStream: null,
+    animationFrameId: null,
+    width,
+    height,
+    dpr,
+    watermarks,
+    facingMode: config.facingMode,
+    isAudio: config.isAudio,
+    isMirror: config.isMirror,
   };
-  // 像素转换为数字
-  const pxtoNum = (px: any) => {
-    if (typeof px === "number") return px;
-    if (typeof px === "string") return parseInt(px.replace("px", ""));
-    return 0;
-  };
-  // 处理水印数据
-  for (const item of config.watermark) {
-    if (item.text) {
-      if (typeof item.text === "string") {
-        item.text = {
-          text: item.text,
-          fontSize: 18,
-          color: "rgba(255, 255, 255, 0.5)",
-        };
-      }
-      item.text.fontSize = pxtoNum(item.text.fontSize);
-    }
-    if (item.img) {
-      if (typeof item.img === "string") {
-        item.img = {
-          url: item.img,
-          width: 100,
-          height: 100,
-        };
-      }
-      item.img.width = pxtoNum(item.img.width);
-      item.img.height = pxtoNum(item.img.height);
-      if (item.img.url) {
-        try {
-          const img = await loadImage(item.img.url);
-          img.width = item.img.width * media.dpr;
-          img.height = item.img.height * media.dpr;
-          img.style.width = item.img.width + "px";
-          img.style.height = item.img.height + "px";
-          img.style.objectFit = "contain";
-          img.referrerPolicy = "no-referrer";
-          item.img.el = img;
-        } catch (e) {
-          return error(
-            "Error accessing media devices: watermark image load error"
-          );
-        }
-      }
-    }
-  }
+
+  startPipeline(engine);
+  return engine;
 };
-// 创建带水印的视频流
-const createProcessedStream = (media: any, config: any) => {
-  if (!media.canvasCtx || !media.mediaStream) return error("初始化失败");
-  const processedStream = media.canvas.captureStream(30);
-  if (config.isAudio) {
-    const audioTracks = media.mediaStream.getAudioTracks();
-    if (audioTracks.length > 0) {
-      processedStream.addTrack(audioTracks[0]);
-    }
+
+/** 搭建合成管线：画布流（含音频轨）接到展示层 video，再逐帧绘制 */
+const startPipeline = (engine: CameraEngine): void => {
+  if (!engine.mediaStream) throw new Error("[p-camera-h5] 媒体流未初始化");
+  const processedStream = engine.canvas.captureStream(30);
+  if (engine.isAudio) {
+    const audioTracks = engine.mediaStream.getAudioTracks();
+    if (audioTracks.length > 0) processedStream.addTrack(audioTracks[0]);
   }
+  engine.canvasStream = processedStream;
+  engine.video.srcObject = processedStream;
+  startRender(engine);
+};
+
+/** 启动逐帧绘制：隐藏 video 播放原始视频轨，绘制到画布 */
+const startRender = (engine: CameraEngine): void => {
+  if (!engine.mediaStream) return;
   const videoElement = document.createElement("video");
-  media.processedVideo = videoElement;
-  videoElement.srcObject = new MediaStream(media.mediaStream.getVideoTracks());
+  engine.processedVideo = videoElement;
+  videoElement.srcObject = new MediaStream(engine.mediaStream.getVideoTracks());
   videoElement.muted = true; // 必须静音以避免音频回路
   videoElement.playsInline = true;
   videoElement.onloadedmetadata = () => {
     videoElement
       .play()
-      .then(() => {
-        drawVideoFrame(videoElement, media, config);
-      })
-      .catch((err) => {
-        error("Error playing video: " + err.message);
-      });
+      .then(() => renderLoop(videoElement, engine))
+      .catch((err) => console.error(`[p-camera-h5] 视频播放失败: ${err.message}`));
   };
-  return processedStream;
 };
-// 绘制视频帧
-const drawVideoFrame = (v: any, media: any, config: any) => {
-  if (!media.canvasCtx) return error("Canvas is not initialized");
-  const cw = media.width * media.dpr;
-  const ch = media.height * media.dpr;
-  // 计算缩放比例以填满画布
-  const scaleX = cw / v.videoWidth;
-  const scaleY = ch / v.videoHeight;
-  const scale = Math.max(scaleX, scaleY);
-  // 计算绘制宽高
-  const drawWidth = v.videoWidth * scale;
-  const drawHeight = v.videoHeight * scale;
-  // 计算居中偏移量
+
+/** 停止逐帧绘制 */
+const stopRender = (engine: CameraEngine): void => {
+  if (engine.animationFrameId != null) {
+    cancelAnimationFrame(engine.animationFrameId);
+    engine.animationFrameId = null;
+  }
+  if (engine.processedVideo) {
+    engine.processedVideo.srcObject = null;
+    engine.processedVideo = null;
+  }
+};
+
+/** 渲染循环：逐帧绘制视频画面与水印 */
+const renderLoop = (video: HTMLVideoElement, engine: CameraEngine): void => {
+  const draw = () => {
+    drawFrame(video, engine);
+    engine.animationFrameId = requestAnimationFrame(draw);
+  };
+  draw();
+};
+
+/** 绘制单帧 */
+const drawFrame = (video: HTMLVideoElement, engine: CameraEngine): void => {
+  const { canvasCtx, width, height, dpr, watermarks, isMirror } = engine;
+  const cw = width * dpr;
+  const ch = height * dpr;
+
+  // 等比缩放填满画布（居中裁剪）
+  const scale = Math.max(cw / video.videoWidth, ch / video.videoHeight);
+  const drawWidth = video.videoWidth * scale;
+  const drawHeight = video.videoHeight * scale;
   const offsetX = (cw - drawWidth) / 2;
   const offsetY = (ch - drawHeight) / 2;
-  // 绘制视频画面
-  media.canvasCtx.save();
-  media.canvasCtx.clearRect(0, 0, cw, ch);
-  if (config.isMirror) {
-    media.canvasCtx.scale(-1, 1);
-    media.canvasCtx.drawImage(
-      v,
-      -offsetX - drawWidth,
-      offsetY,
-      drawWidth,
-      drawHeight
-    );
+
+  canvasCtx.save();
+  canvasCtx.clearRect(0, 0, cw, ch);
+  if (isMirror) {
+    canvasCtx.scale(-1, 1);
+    canvasCtx.drawImage(video, -offsetX - drawWidth, offsetY, drawWidth, drawHeight);
   } else {
-    media.canvasCtx.drawImage(v, offsetX, offsetY, drawWidth, drawHeight);
+    canvasCtx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
   }
-  media.canvasCtx.restore();
-  // 绘制水印
-  if (config.watermark && config.watermark.length > 0) {
-    drawWatermark(media, config);
-  }
-  media.animationFrameId = requestAnimationFrame(() =>
-    drawVideoFrame(v, media, config)
-  );
+  canvasCtx.restore();
+
+  drawWatermarks(canvasCtx, watermarks, dpr);
 };
-const drawWatermark = (media: any, config: any) => {
-  const dpr = media.dpr;
-  config.watermark.forEach((item: any) => {
-    const x = item.x * dpr;
-    const y = item.y * dpr;
-    media.canvasCtx.save();
-    if (item.text) {
-      media.canvasCtx.fillStyle = item.text.color;
-      media.canvasCtx.font = `${item.text.fontSize * dpr}px sans-serif`;
-      media.canvasCtx.fillText(item.text.text, x, y);
-    } else if (item.img) {
-      media.canvasCtx.drawImage(
-        item.img.el,
-        x,
-        y,
-        item.img.width * dpr,
-        item.img.height * dpr
-      );
-    }
-    media.canvasCtx.restore();
+
+/**
+ * 运行时切换前后摄像头。
+ * canvasStream 绑定的是画布而非摄像头，切换后无需重建，录像中的 MediaRecorder 不受影响；
+ * 画布分辨率随容器不变，新画面按帧内的等比缩放规则自动适配。
+ */
+export const switchFacingCamera = async (engine: CameraEngine): Promise<void> => {
+  const mediaStream = engine.mediaStream;
+  if (!mediaStream) throw new Error("[p-camera-h5] 媒体流未初始化");
+  const nextFacing: FacingMode = engine.facingMode === "user" ? "environment" : "user";
+  // 只申请视频轨（音频轨沿用当前流的麦克风），先获取新流再释放旧轨，
+  // 目标朝向不可用时抛错且当前画面不受影响
+  const newStream = await openStream(nextFacing, false, true);
+  const newTrack = newStream.getVideoTracks()[0];
+  if (!newTrack) {
+    newStream.getTracks().forEach((track) => track.stop());
+    throw new Error("[p-camera-h5] 未检测到可用的摄像头设备");
+  }
+
+  stopRender(engine);
+  // 仅替换视频轨，麦克风轨保持不变，录音不中断
+  mediaStream.getVideoTracks().forEach((track) => {
+    track.stop();
+    mediaStream.removeTrack(track);
   });
+  mediaStream.addTrack(newTrack);
+  engine.facingMode = nextFacing;
+  startRender(engine);
+};
+
+/** 释放相机引擎占用的全部资源 */
+export const destroyCamera = (engine: CameraEngine): void => {
+  stopRender(engine);
+  engine.mediaStream?.getTracks().forEach((track) => track.stop());
+  engine.canvasStream?.getTracks().forEach((track) => track.stop());
+  engine.video.srcObject = null;
+  engine.mediaStream = null;
+  engine.canvasStream = null;
 };
