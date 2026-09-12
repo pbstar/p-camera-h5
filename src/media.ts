@@ -1,5 +1,4 @@
-import type { ResolvedOptions, FacingMode, Resolution } from "./types";
-import { RESOLUTION_PRESETS, DEFAULT_RESOLUTION } from "./constants";
+import type { ResolvedOptions, FacingMode } from "./types";
 import { prepareWatermarks, drawWatermarks, type PreparedWatermark } from "./watermark";
 
 /** 相机运行时状态 */
@@ -23,23 +22,20 @@ export interface CameraEngine {
   facingMode: FacingMode;
   isAudio: boolean;
   isMirror: boolean;
-  resolution: Resolution;
 }
 
 /** 打开指定朝向的摄像头流；exactFacing 为 true 时严格匹配朝向（用于主动切换） */
 const openStream = (
   facingMode: FacingMode,
   isAudio: boolean,
-  resolution: Resolution,
   exactFacing = false
 ): Promise<MediaStream> => {
-  const preset = RESOLUTION_PRESETS[resolution] ?? RESOLUTION_PRESETS[DEFAULT_RESOLUTION];
+  // 720p（ideal 软约束：设备不支持时浏览器自动降级）
   return navigator.mediaDevices.getUserMedia({
     video: {
-      // ideal 软约束：设备不支持时浏览器自动降级
       facingMode: exactFacing ? { exact: facingMode } : facingMode,
-      width: { ideal: preset.width },
-      height: { ideal: preset.height },
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
     },
     audio: isAudio
       ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -66,7 +62,7 @@ export const setupCamera = async (
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
 
-  const mediaStream = await openStream(config.facingMode, config.isAudio, config.resolution);
+  const mediaStream = await openStream(config.facingMode, config.isAudio);
 
   const canvasCtx = canvas.getContext("2d", {
     alpha: false, // 关闭透明度提升渲染性能
@@ -93,7 +89,6 @@ export const setupCamera = async (
     facingMode: config.facingMode,
     isAudio: config.isAudio,
     isMirror: config.isMirror,
-    resolution: config.resolution,
   };
 
   startPipeline(engine);
@@ -187,7 +182,7 @@ export const switchFacingCamera = async (engine: CameraEngine): Promise<void> =>
   const nextFacing: FacingMode = engine.facingMode === "user" ? "environment" : "user";
   // 只申请视频轨（音频轨沿用当前流的麦克风），先获取新流再释放旧轨，
   // 目标朝向不可用时抛错且当前画面不受影响
-  const newStream = await openStream(nextFacing, false, engine.resolution, true);
+  const newStream = await openStream(nextFacing, false, true);
   const newTrack = newStream.getVideoTracks()[0];
   if (!newTrack) {
     newStream.getTracks().forEach((track) => track.stop());

@@ -2,6 +2,16 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.0.0-beta.3](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.2...v3.0.0-beta.3) - 2026-09-12
+
+### ⚠ 破坏性变更（相对 beta.2）
+
+- 移除 `resolution` 配置项与 `Resolution` 类型导出：摄像头分辨率内部固定为 1280×720（ideal 软约束，设备不支持时仍由浏览器自动降级），不再对外暴露 `480p` / `720p` / `1080p` 预设选择
+
+### 修复
+
+- 修复模板渲染后取容器错误导致的 `Cannot set properties of null (setting 'srcObject')`：`el.firstElementChild` 在模板含 `<style>` 时取到的是 `<style>` 而非 `.p-camera-h5` 容器，导致后续 `querySelector(".p-camera-video")` 返回 `null`；改为 `el.querySelector(".p-camera-h5")` 并加 null 兜底校验
+
 ## [3.0.0-beta.2](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.1...v3.0.0-beta.2) - 2026-09-02
 
 ### ⚠ 破坏性变更（相对 beta.1）

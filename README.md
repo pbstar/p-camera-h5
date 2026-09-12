@@ -8,7 +8,6 @@
 - **录像**：`startRecording()` / `stopRecording()`，支持暂停/恢复与状态查询，自动按浏览器能力选择 `mp4` / `webm` 格式
 - **切换摄像头**：`switchFacing()` 运行时切换前后摄，录像不中断
 - **水印**：支持文字（内容、位置、颜色、字号，支持每帧求值的动态时间水印）与图片水印
-- **分辨率**：`resolution` 预设 `480p` / `720p` / `1080p`，设备不支持时自动降级
 - **镜像**：`isMirror` 前置摄像头画面反转
 - **音频**：`isAudio` 开启麦克风录制
 - **类型安全**：原生 TypeScript 类型声明，构建时自动生成
@@ -51,7 +50,6 @@ import { createCamera } from "p-camera-h5";
 const camera = await createCamera({
   el: document.getElementById("el"),
   facingMode: "environment", // 后置摄像头
-  resolution: "720p",
   isMirror: false,
   isAudio: false,
   watermark: [
@@ -87,7 +85,6 @@ camera.destroy();
 | ------------ | ------------- | ------------- | ----------------------------------------- |
 | `el`         | `HTMLElement` | 必填          | 挂载容器元素                              |
 | `facingMode` | `string`      | `environment` | 摄像头方向：`user`（前置）/ `environment`（后置） |
-| `resolution` | `string`      | `720p`        | 分辨率预设：`480p` / `720p` / `1080p`，设备不支持时自动降级 |
 | `isAudio`    | `boolean`     | `false`       | 是否开启麦克风录制                        |
 | `isMirror`   | `boolean`     | `false`       | 是否镜像反转画面（前置摄像头常用）        |
 | `watermark`  | `Watermark[]` | `null`        | 水印配置数组，详见下方说明                |

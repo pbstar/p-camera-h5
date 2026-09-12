@@ -1,9 +1,6 @@
 /** 摄像头朝向 */
 export type FacingMode = "user" | "environment";
 
-/** 摄像头分辨率预设 */
-export type Resolution = "480p" | "720p" | "1080p";
-
 /** 文字水印配置 */
 export interface WatermarkText {
   /** 文字内容；传函数时每帧求值（可用于时间等动态水印） */
@@ -42,8 +39,6 @@ export interface CameraOptions {
   el: HTMLElement;
   /** 摄像头朝向，默认 "environment"（后置） */
   facingMode?: FacingMode;
-  /** 摄像头分辨率预设，默认 "720p"（设备不支持时自动降级） */
-  resolution?: Resolution;
   /** 是否录制音频，默认 false */
   isAudio?: boolean;
   /** 是否镜像反转画面，默认 false */
@@ -56,7 +51,6 @@ export interface CameraOptions {
 export interface ResolvedOptions {
   el: HTMLElement;
   facingMode: FacingMode;
-  resolution: Resolution;
   isAudio: boolean;
   isMirror: boolean;
   watermark: Watermark[] | null;

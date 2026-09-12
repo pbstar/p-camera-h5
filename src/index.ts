@@ -6,8 +6,6 @@ import type {
 } from "./types";
 import {
   DEFAULT_FACING_MODE,
-  DEFAULT_RESOLUTION,
-  RESOLUTION_PRESETS,
   elTemplate,
 } from "./constants";
 import { setupCamera, destroyCamera, switchFacingCamera, type CameraEngine } from "./media";
@@ -32,7 +30,6 @@ export type {
   WatermarkText,
   WatermarkImage,
   FacingMode,
-  Resolution,
 } from "./types";
 
 /** 校验并合并配置默认值 */
@@ -44,14 +41,9 @@ const resolveConfig = (options: CameraOptions): ResolvedOptions => {
   if (facingMode !== "user" && facingMode !== "environment") {
     throw new Error('[p-camera-h5] facingMode 仅支持 "user" 或 "environment"');
   }
-  const resolution = options.resolution ?? DEFAULT_RESOLUTION;
-  if (!(resolution in RESOLUTION_PRESETS)) {
-    throw new Error('[p-camera-h5] resolution 仅支持 "480p" / "720p" / "1080p"');
-  }
   return {
     el: options.el,
     facingMode,
-    resolution,
     isAudio: options.isAudio ?? false,
     isMirror: options.isMirror ?? false,
     watermark: options.watermark ?? null,
@@ -70,7 +62,8 @@ export const createCamera = async (
 
   // 渲染模板
   el.innerHTML = elTemplate;
-  const container = el.firstElementChild as HTMLElement;
+  const container = el.querySelector(".p-camera-h5") as HTMLElement | null;
+  if (!container) throw new Error("[p-camera-h5] 模板渲染异常：未找到 .p-camera-h5 容器");
 
   setLoading(container, true);
   let engine: CameraEngine | null = null;

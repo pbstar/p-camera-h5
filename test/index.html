@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -31,7 +31,7 @@
   </head>
 
   <body>
-    <div id="el" style="width: 360px; height: 300px"></div>
+    <div id="el" style="width: 520px; height: 300px"></div>
     <div class="btns">
       <button id="capture">拍照</button>
       <button id="record">录像</button>
@@ -61,7 +61,6 @@
         .createCamera({
           el: document.querySelector("#el"),
           isMirror: true,
-          resolution: "720p",
           watermark: [
             {
               x: 10,
