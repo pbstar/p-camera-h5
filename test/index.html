@@ -63,6 +63,9 @@
       const recordState = { timer: null, time: 0 };
       let currentCamera = null;
       let currentFacingMode = "environment";
+      // PC 端始终镜像；移动端仅前置摄像头镜像
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const shouldMirror = () => (isMobile ? currentFacingMode === "user" : true);
 
       const onCapture = (camera) => {
         camera.capture().then(download);
@@ -125,7 +128,7 @@
           .createCamera({
             el,
             facingMode: currentFacingMode,
-            isMirror: currentFacingMode === "environment",
+            isMirror: shouldMirror(),
             watermark: buildWatermark(),
           })
           .then((camera) => {
