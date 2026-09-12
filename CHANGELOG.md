@@ -2,62 +2,37 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [3.0.0-beta.3](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.2...v3.0.0-beta.3) - 2026-09-12
-
-### ⚠ 破坏性变更（相对 beta.2）
-
-- 移除 `resolution` 配置项与 `Resolution` 类型导出：摄像头分辨率内部固定为 1280×720（ideal 软约束，设备不支持时仍由浏览器自动降级），不再对外暴露 `480p` / `720p` / `1080p` 预设选择
-
-### 修复
-
-- 修复模板渲染后取容器错误导致的 `Cannot set properties of null (setting 'srcObject')`：`el.firstElementChild` 在模板含 `<style>` 时取到的是 `<style>` 而非 `.p-camera-h5` 容器，导致后续 `querySelector(".p-camera-video")` 返回 `null`；改为 `el.querySelector(".p-camera-h5")` 并加 null 兜底校验
-
-## [3.0.0-beta.2](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.1...v3.0.0-beta.2) - 2026-09-02
-
-### ⚠ 破坏性变更（相对 beta.1）
-
-- 水印配置统一为对象形式：定位（`x`/`y`）在外层，内容与样式收进 `text: { content, color, fontSize }` / `img: { url, width, height }` 对象，不再支持 `text`/`img` 的字符串简写
-
-### 新增
-
-- 新增 `resolution` 配置，分辨率预设 `480p` / `720p` / `1080p`（默认 `720p`），解决默认 640×480 导致拍照/录像模糊的问题；设备不支持时自动降级
-- `capture()` 支持指定图片格式：默认输出 JPEG（内部固定质量 0.92，体积远小于 PNG），可传 `{ type: "image/png" }`
-- 文字水印 `text.content` 支持传函数，每帧求值，可用于时间等动态水印
-- 新增录像控制：`pauseRecording()` / `resumeRecording()` / `isRecording()`
-- 新增 `switchFacing()`，运行时切换前后摄像头，录像不中断；目标朝向不可用时 reject 且画面不受影响
-
-### 修复
-
-- 修复 CJS 入口损坏的问题：包声明 `"type": "module"` 后，`require` 指向的 `.js` UMD 产物被当作 ESM 解析，导致返回空对象；`require` 条件改为指向 `.cjs` 产物（新增构建输出 `p-camera-h5.umd.cjs`），并补充 `module` 字段
-- 修复销毁时若有 `stopRecording()` 尚在等待结果会永久挂起的问题，改为 reject
-
-## [3.0.0-beta.1](https://github.com/pbstar/p-camera-h5/compare/v2.0.3...v3.0.0-beta.1) - 2026-08-31
+## [3.0.0-beta.1](https://github.com/pbstar/p-camera-h5/compare/v2.0.3...v3.0.0-beta.1) - 2026-09-12
 
 ### ⚠ 破坏性变更
 
-- API 彻底重设计：类实例 `new pCameraH5(options)` 改为函数式工厂 `createCamera(options)`，返回 `Promise<CameraController>`
-- 参数校验失败由 `console.error` 改为抛出 `Error`
-- 拍照 / 录像等方法在相机未就绪或已销毁时由静默失败改为 `reject`
-- 移除内置默认文字水印（`watermark` 默认由数组改为 `null`）
+- API 由类实例 `new pCameraH5(options)` 重构为工厂函数 `createCamera(options)`，返回 `Promise<CameraController>`
+- 容器只渲染视频层，移除内置按钮与默认水印
+- 水印配置统一为对象形式：定位（`x`/`y`）在外层，内容收进 `text` / `img` 对象
+- 拍照输出格式由 PNG 改为 JPEG
+- 参数校验失败与方法未就绪/已销毁场景由静默失败改为 `throw` / `reject`
 - `startRecording()` 返回值由 `Promise<boolean>` 改为 `Promise<void>`
-- 移除内置按钮与错误处理 UI 的 DOM 依赖，容器仅渲染视频层
+
+### 新增
+
+- 录像控制：`pauseRecording()` / `resumeRecording()` / `isRecording()`
+- `switchFacing()` 运行时切换前后摄像头，录像不中断
+- 文字水印 `text.content` 支持传函数，每帧求值，可用于时间等动态水印
 
 ### 修复
 
-- 修复录像输出 webm 内容却以 `.mp4` 命名的问题：按 `MediaRecorder.isTypeSupported` 探测格式，扩展名与真实 MIME 对齐
-- 修复图片水印加载失败导致整个相机初始化中断的问题：单张失败仅告警跳过
+- 修复 CJS 入口损坏：`require` 条件指向 `.cjs` 产物，避免 UMD 被当作 ESM 解析
+- 修复销毁时若有 `stopRecording()` 尚在等待会永久挂起，改为 reject
+- 修复录像 `webm` 内容以 `.mp4` 命名的问题：按 `MediaRecorder.isTypeSupported` 探测格式
+- 修复图片水印加载失败导致整个相机初始化中断：单张失败仅告警跳过
 
 ### 优化
 
 - 拍照由 `toDataURL` + base64 转 File 改为 `canvas.toBlob`，降低内存占用
-- 水印拆分为独立模块，规范化（字符串简写、默认值填充）与绘制逻辑分离
-- 移除未使用的构建依赖 `rollup-plugin-json`、`rollup-plugin-postcss`
-
-### 工程化
-
-- TypeScript 声明文件改为构建时从源码自动生成（`tsc -p tsconfig.build.json`）
+- 水印拆分为独立模块，规范化与绘制逻辑分离
+- TypeScript 声明文件改为构建时从源码自动生成
 - `lib` 构建产物改为 git 忽略，发布时通过 build 生成
-- UMD 构建补充 `exports: "named"`，全局变量 `pCameraH5` 携带命名导出
+- 移除未使用的构建依赖（`rollup-plugin-json`、`rollup-plugin-postcss`）
 
 ## [2.0.3](https://github.com/pbstar/p-camera-h5/compare/v2.0.2...v2.0.3) - 2025-08-30
 

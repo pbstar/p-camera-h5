@@ -4,7 +4,7 @@
 
 ## 特性
 
-- **拍照**：`capture()` 输出 JPEG（可切 PNG）
+- **拍照**：`capture()` 输出 JPEG
 - **录像**：`startRecording()` / `stopRecording()`，支持暂停/恢复与状态查询，自动按浏览器能力选择 `mp4` / `webm` 格式
 - **切换摄像头**：`switchFacing()` 运行时切换前后摄，录像不中断
 - **水印**：支持文字（内容、位置、颜色、字号，支持每帧求值的动态时间水印）与图片水印
@@ -59,9 +59,8 @@ const camera = await createCamera({
   ],
 });
 
-// 拍照（默认 JPEG，可指定 PNG）
+// 拍照（JPEG）
 const photo = await camera.capture();
-const png = await camera.capture({ type: "image/png" });
 
 // 录像
 await camera.startRecording();
@@ -135,7 +134,7 @@ watermark: [
 
 | 方法                          | 说明                           | 返回值           |
 | ----------------------------- | ------------------------------ | ---------------- |
-| `capture(options?)`           | 拍照，可指定图片格式           | `Promise<File>`  |
+| `capture()`                   | 拍照，输出 JPEG                | `Promise<File>`  |
 | `startRecording()`            | 开始录像                       | `Promise<void>`  |
 | `stopRecording()`             | 停止录像                       | `Promise<File>`  |
 | `pauseRecording()`            | 暂停录像                       | `void`           |
@@ -143,12 +142,6 @@ watermark: [
 | `isRecording()`               | 是否正在录像（暂停中也算）     | `boolean`        |
 | `switchFacing()`              | 切换前后摄像头，录像不中断     | `Promise<void>`  |
 | `destroy()`                   | 销毁实例，释放资源             | `void`           |
-
-`capture` 参数：
-
-| 参数   | 类型                           | 默认值       | 说明    |
-| ------ | ------------------------------ | ------------ | ------- |
-| `type` | `"image/jpeg"` / `"image/png"` | `image/jpeg` | 图片格式 |
 
 所有 Promise 方法在相机未就绪或已销毁时会 reject，调用方需捕获错误。
 
@@ -168,7 +161,7 @@ v3 相对 v2 的主要变更：
 - 移除内置按钮与默认水印，容器只渲染视频层。
 - 水印配置统一为对象形式：定位（`x`/`y`）在外层，内容与样式收进 `text`/`img` 对象，不再支持字符串简写。
 - 错误处理由 `console.error` 改为 reject / throw，便于调用方捕获。
-- 拍照默认输出 JPEG（v2 为 PNG），需要 PNG 时传 `{ type: "image/png" }`。
+- 拍照输出格式由 PNG 改为 JPEG。
 - 录像文件扩展名与真实 MIME 对齐，不再将 `webm` 内容命名为 `mp4`。
 - 移除未使用的构建依赖（`rollup-plugin-json`、`rollup-plugin-postcss`）。
 

@@ -1,6 +1,6 @@
 {
   "name": "p-camera-h5",
-  "version": "3.0.0-beta.3",
+  "version": "3.0.0-beta.1",
   "description": "轻量级 H5 相机插件，支持拍照、录像、文字与图片水印",
   "main": "./lib/p-camera-h5.umd.cjs",
   "browser": "./lib/p-camera-h5.umd.js",
@@ -20,7 +20,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && rollup -c",
+    "build": "tsc --noEmit -p tsconfig.json && rollup -c",
     "dev": "cross-env NODE_ENV=dev rollup -c -w"
   },
   "bugs": {
@@ -57,6 +57,7 @@
     "@types/node": "^20.14.10",
     "cross-env": "^7.0.3",
     "rollup": "^4.17.2",
+    "rollup-plugin-dts": "^6.5.1",
     "rollup-plugin-serve": "^1.1.1",
     "tslib": "^2.6.3",
     "typescript": "^5.9.3"

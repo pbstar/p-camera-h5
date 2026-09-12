@@ -97,7 +97,7 @@ export const setupCamera = async (
 
 /** 搭建合成管线：画布流（含音频轨）接到展示层 video，再逐帧绘制 */
 const startPipeline = (engine: CameraEngine): void => {
-  if (!engine.mediaStream) throw new Error("媒体流未初始化");
+  if (!engine.mediaStream) throw new Error("[p-camera-h5] 媒体流未初始化");
   const processedStream = engine.canvas.captureStream(30);
   if (engine.isAudio) {
     const audioTracks = engine.mediaStream.getAudioTracks();
@@ -178,7 +178,7 @@ const drawFrame = (video: HTMLVideoElement, engine: CameraEngine): void => {
  */
 export const switchFacingCamera = async (engine: CameraEngine): Promise<void> => {
   const mediaStream = engine.mediaStream;
-  if (!mediaStream) throw new Error("媒体流未初始化");
+  if (!mediaStream) throw new Error("[p-camera-h5] 媒体流未初始化");
   const nextFacing: FacingMode = engine.facingMode === "user" ? "environment" : "user";
   // 只申请视频轨（音频轨沿用当前流的麦克风），先获取新流再释放旧轨，
   // 目标朝向不可用时抛错且当前画面不受影响
@@ -186,7 +186,7 @@ export const switchFacingCamera = async (engine: CameraEngine): Promise<void> =>
   const newTrack = newStream.getVideoTracks()[0];
   if (!newTrack) {
     newStream.getTracks().forEach((track) => track.stop());
-    throw new Error("未检测到可用的摄像头设备");
+    throw new Error("[p-camera-h5] 未检测到可用的摄像头设备");
   }
 
   stopRender(engine);

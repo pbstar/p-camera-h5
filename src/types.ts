@@ -56,16 +56,10 @@ export interface ResolvedOptions {
   watermark: Watermark[] | null;
 }
 
-/** 拍照参数 */
-export interface CaptureOptions {
-  /** 图片格式，默认 "image/jpeg" */
-  type?: "image/jpeg" | "image/png";
-}
-
 /** 相机控制器，由 createCamera 返回 */
 export interface CameraController {
-  /** 拍照，返回图片文件 */
-  capture(options?: CaptureOptions): Promise<File>;
+  /** 拍照，返回 JPEG 图片文件 */
+  capture(): Promise<File>;
   /** 开始录像 */
   startRecording(): Promise<void>;
   /** 停止录像，返回视频文件 */

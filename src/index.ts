@@ -1,21 +1,19 @@
 import type {
   CameraController,
   CameraOptions,
-  CaptureOptions,
   ResolvedOptions,
 } from "./types";
 import {
   DEFAULT_FACING_MODE,
+  DEFAULT_JPEG_QUALITY,
   elTemplate,
 } from "./constants";
 import { setupCamera, destroyCamera, switchFacingCamera, type CameraEngine } from "./media";
 import {
   blobToFile,
   describeMediaError,
-  extFromImageMime,
   extFromMime,
   pickRecordingMime,
-  resolveCaptureFormat,
   setLoading,
   showError,
 } from "./utils";
@@ -24,7 +22,6 @@ import {
 export type {
   CameraController,
   CameraOptions,
-  CaptureOptions,
   ResolvedOptions,
   Watermark,
   WatermarkText,
@@ -90,18 +87,17 @@ export const createCamera = async (
     return engine;
   };
 
-  /** 拍照，返回图片文件（默认 JPEG，可指定 PNG） */
-  const capture = (options?: CaptureOptions): Promise<File> =>
+  /** 拍照，返回 JPEG 图片文件 */
+  const capture = (): Promise<File> =>
     new Promise((resolve, reject) => {
       const current = ensureAlive();
-      const { mime, quality } = resolveCaptureFormat(options?.type);
       current.canvas.toBlob(
         (blob) => {
-          if (blob) resolve(blobToFile(blob, extFromImageMime(mime)));
+          if (blob) resolve(blobToFile(blob, "jpg"));
           else reject(new Error("[p-camera-h5] 生成图片失败"));
         },
-        mime,
-        quality
+        "image/jpeg",
+        DEFAULT_JPEG_QUALITY
       );
     });
 
