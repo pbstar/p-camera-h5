@@ -6,7 +6,6 @@
 
 - **拍照**：`capture()` 输出 JPEG
 - **录像**：`startRecording()` / `stopRecording()`，支持暂停/恢复与状态查询，自动按浏览器能力选择 `mp4` / `webm` 格式
-- **切换摄像头**：`switchFacing()` 运行时切换前后摄，录像不中断
 - **水印**：支持文字（内容、位置、颜色、字号，支持每帧求值的动态时间水印）与图片水印
 - **镜像**：`isMirror` 前置摄像头画面反转
 - **音频**：`isAudio` 开启麦克风录制
@@ -68,9 +67,6 @@ camera.pauseRecording();
 camera.resumeRecording();
 camera.isRecording(); // => true
 const video = await camera.stopRecording();
-
-// 切换前后摄像头（录像中也可调用，画面切换且录像不中断）
-await camera.switchFacing();
 
 // 销毁
 camera.destroy();
@@ -140,7 +136,6 @@ watermark: [
 | `pauseRecording()`            | 暂停录像                       | `void`           |
 | `resumeRecording()`           | 恢复录像                       | `void`           |
 | `isRecording()`               | 是否正在录像（暂停中也算）     | `boolean`        |
-| `switchFacing()`              | 切换前后摄像头，录像不中断     | `Promise<void>`  |
 | `destroy()`                   | 销毁实例，释放资源             | `void`           |
 
 所有 Promise 方法在相机未就绪或已销毁时会 reject，调用方需捕获错误。
@@ -150,8 +145,7 @@ watermark: [
 1. **安全协议**：需在 HTTPS 或 `localhost` 环境运行（浏览器安全策略要求）。
 2. **权限管理**：首次使用需用户授权摄像头 / 麦克风权限；拒绝授权时 `createCamera` 会 reject。
 3. **录像格式**：`stopRecording()` 返回的 `File` 扩展名与 MIME 一致——Safari 等支持 `mp4` 的浏览器输出 `mp4`，其余输出 `webm`。
-4. **切换摄像头**：`switchFacing()` 需设备存在两个摄像头；设备只有一个时（或目标朝向不可用）会 reject，当前画面不受影响。
-5. **销毁后重建**：`destroy()` 会清空容器内容；需再次使用时请重新调用 `createCamera`。
+4. **销毁后重建**：`destroy()` 会清空容器内容；需再次使用时请重新调用 `createCamera`。
 
 ## 从 v2 迁移
 

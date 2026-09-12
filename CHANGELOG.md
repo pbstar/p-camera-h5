@@ -16,7 +16,6 @@
 ### 新增
 
 - 录像控制：`pauseRecording()` / `resumeRecording()` / `isRecording()`
-- `switchFacing()` 运行时切换前后摄像头，录像不中断
 - 文字水印 `text.content` 支持传函数，每帧求值，可用于时间等动态水印
 
 ### 修复

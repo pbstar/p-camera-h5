@@ -8,7 +8,7 @@ import {
   DEFAULT_JPEG_QUALITY,
   elTemplate,
 } from "./constants";
-import { setupCamera, destroyCamera, switchFacingCamera, type CameraEngine } from "./media";
+import { setupCamera, destroyCamera, type CameraEngine } from "./media";
 import {
   blobToFile,
   describeMediaError,
@@ -167,16 +167,6 @@ export const createCamera = async (
   /** 是否正在录像（暂停中也算录像中） */
   const isRecording = (): boolean => recording;
 
-  /** 切换前后摄像头，录像中的画面会随之切换且录像不中断 */
-  const switchFacing = async (): Promise<void> => {
-    const current = ensureAlive();
-    try {
-      await switchFacingCamera(current);
-    } catch (err) {
-      throw describeMediaError(err);
-    }
-  };
-
   /** 销毁实例，释放全部资源 */
   const destroy = (): void => {
     if (!engine) return; // 幂等
@@ -203,7 +193,6 @@ export const createCamera = async (
     pauseRecording,
     resumeRecording,
     isRecording,
-    switchFacing,
     destroy,
   };
 };

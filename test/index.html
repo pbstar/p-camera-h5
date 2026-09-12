@@ -24,9 +24,6 @@
       .btns button#destroy {
         background-color: #dc3545;
       }
-      .btns button#switch {
-        background-color: #28a745;
-      }
     </style>
   </head>
 
@@ -57,64 +54,94 @@
         return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())} ${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
       };
 
-      pCameraH5
-        .createCamera({
-          el: document.querySelector("#el"),
-          isMirror: true,
-          watermark: [
-            {
-              x: 10,
-              y: 28,
-              text: { content: "📷 pCameraH5" },
-            },
-            {
-              x: 10,
-              y: 58,
-              // 动态时间水印：传函数，每帧刷新
-              text: { content: formatTime, color: "#fff", fontSize: 16 },
-            },
-          ],
-        })
-        .then((camera) => {
-          const captureBtn = document.querySelector("#capture");
-          const recordBtn = document.querySelector("#record");
-          const switchBtn = document.querySelector("#switch");
-          const destroyBtn = document.querySelector("#destroy");
-          let timer = null;
+      const el = document.querySelector("#el");
+      const captureBtn = document.querySelector("#capture");
+      const recordBtn = document.querySelector("#record");
+      const switchBtn = document.querySelector("#switch");
+      const destroyBtn = document.querySelector("#destroy");
 
-          captureBtn.addEventListener("click", () => {
-            camera.capture().then(download);
+      const recordState = { timer: null, time: 0 };
+      let currentCamera = null;
+      let currentFacingMode = "environment";
+
+      const onCapture = (camera) => {
+        camera.capture().then(download);
+      };
+
+      const onRecord = (camera) => {
+        if (!camera.isRecording()) {
+          camera.startRecording().then(() => {
+            recordBtn.textContent = "结束（0s）";
+            recordBtn.style.backgroundColor = "#dc3545";
+            recordState.time = 0;
+            recordState.timer = setInterval(() => {
+              recordState.time++;
+              recordBtn.textContent = "结束（" + recordState.time + "s）";
+            }, 1000);
           });
-          recordBtn.addEventListener("click", () => {
-            if (!camera.isRecording()) {
-              camera.startRecording().then(() => {
-                recordBtn.textContent = "结束（0s）";
-                recordBtn.style.backgroundColor = "#dc3545";
-                let time = 0;
-                timer = setInterval(() => {
-                  time++;
-                  recordBtn.textContent = "结束（" + time + "s）";
-                }, 1000);
-              });
-            } else {
-              camera.stopRecording().then((file) => {
-                download(file);
-                clearInterval(timer);
-                recordBtn.style.backgroundColor = "#007bff";
-                recordBtn.textContent = "录像";
-              });
-            }
+        } else {
+          camera.stopRecording().then((file) => {
+            download(file);
+            clearInterval(recordState.timer);
+            recordBtn.style.backgroundColor = "#007bff";
+            recordBtn.textContent = "录像";
           });
-          switchBtn.addEventListener("click", () => {
-            camera.switchFacing().catch((err) => alert(err.message));
+        }
+      };
+
+      const onDestroy = (camera) => {
+        camera.destroy();
+      };
+
+      const buildWatermark = () => [
+        {
+          x: 10,
+          y: 28,
+          text: { content: "📷 pCameraH5" },
+        },
+        {
+          x: 10,
+          y: 58,
+          // 动态时间水印：传函数，每帧刷新
+          text: { content: formatTime, color: "#fff", fontSize: 16 },
+        },
+      ];
+
+      const onSwitch = () => {
+        if (!currentCamera) return;
+        currentCamera.destroy();
+        currentCamera = null;
+        // 重置录像按钮状态
+        clearInterval(recordState.timer);
+        recordBtn.style.backgroundColor = "#007bff";
+        recordBtn.textContent = "录像";
+        // 切换朝向并重新初始化
+        currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+        initCamera();
+      };
+
+      const initCamera = () => {
+        pCameraH5
+          .createCamera({
+            el,
+            facingMode: currentFacingMode,
+            isMirror: currentFacingMode === "environment",
+            watermark: buildWatermark(),
+          })
+          .then((camera) => {
+            currentCamera = camera;
+          })
+          .catch((err) => {
+            console.error(err);
           });
-          destroyBtn.addEventListener("click", () => {
-            camera.destroy();
-          });
-        })
-        .catch((err) => {
-          console.error(err);
-        });
+      };
+
+      captureBtn.addEventListener("click", () => currentCamera && onCapture(currentCamera));
+      recordBtn.addEventListener("click", () => currentCamera && onRecord(currentCamera));
+      switchBtn.addEventListener("click", onSwitch);
+      destroyBtn.addEventListener("click", () => currentCamera && onDestroy(currentCamera));
+
+      initCamera();
     </script>
   </body>
 </html>

@@ -70,8 +70,6 @@ export interface CameraController {
   resumeRecording(): void;
   /** 是否正在录像（含暂停状态） */
   isRecording(): boolean;
-  /** 切换前后摄像头 */
-  switchFacing(): Promise<void>;
   /** 销毁实例，释放摄像头与画布资源 */
   destroy(): void;
 }

@@ -18,22 +18,19 @@ export interface CameraEngine {
   height: number;
   dpr: number;
   watermarks: PreparedWatermark[] | null;
-  /** 运行时可变的相机状态，switchFacing 会更新 */
-  facingMode: FacingMode;
   isAudio: boolean;
   isMirror: boolean;
 }
 
-/** 打开指定朝向的摄像头流；exactFacing 为 true 时严格匹配朝向（用于主动切换） */
+/** 打开指定朝向的摄像头流 */
 const openStream = (
   facingMode: FacingMode,
-  isAudio: boolean,
-  exactFacing = false
+  isAudio: boolean
 ): Promise<MediaStream> => {
   // 720p（ideal 软约束：设备不支持时浏览器自动降级）
   return navigator.mediaDevices.getUserMedia({
     video: {
-      facingMode: exactFacing ? { exact: facingMode } : facingMode,
+      facingMode,
       width: { ideal: 1280 },
       height: { ideal: 720 },
     },
@@ -86,7 +83,6 @@ export const setupCamera = async (
     height,
     dpr,
     watermarks,
-    facingMode: config.facingMode,
     isAudio: config.isAudio,
     isMirror: config.isMirror,
   };
@@ -169,35 +165,6 @@ const drawFrame = (video: HTMLVideoElement, engine: CameraEngine): void => {
   canvasCtx.restore();
 
   drawWatermarks(canvasCtx, watermarks, dpr);
-};
-
-/**
- * 运行时切换前后摄像头。
- * canvasStream 绑定的是画布而非摄像头，切换后无需重建，录像中的 MediaRecorder 不受影响；
- * 画布分辨率随容器不变，新画面按帧内的等比缩放规则自动适配。
- */
-export const switchFacingCamera = async (engine: CameraEngine): Promise<void> => {
-  const mediaStream = engine.mediaStream;
-  if (!mediaStream) throw new Error("[p-camera-h5] 媒体流未初始化");
-  const nextFacing: FacingMode = engine.facingMode === "user" ? "environment" : "user";
-  // 只申请视频轨（音频轨沿用当前流的麦克风），先获取新流再释放旧轨，
-  // 目标朝向不可用时抛错且当前画面不受影响
-  const newStream = await openStream(nextFacing, false, true);
-  const newTrack = newStream.getVideoTracks()[0];
-  if (!newTrack) {
-    newStream.getTracks().forEach((track) => track.stop());
-    throw new Error("[p-camera-h5] 未检测到可用的摄像头设备");
-  }
-
-  stopRender(engine);
-  // 仅替换视频轨，麦克风轨保持不变，录音不中断
-  mediaStream.getVideoTracks().forEach((track) => {
-    track.stop();
-    mediaStream.removeTrack(track);
-  });
-  mediaStream.addTrack(newTrack);
-  engine.facingMode = nextFacing;
-  startRender(engine);
 };
 
 /** 释放相机引擎占用的全部资源 */
