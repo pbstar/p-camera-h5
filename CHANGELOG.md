@@ -2,6 +2,26 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.0.0-beta.2](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.1...v3.0.0-beta.2) - 2026-09-18
+
+### ⚠ 破坏性变更
+
+- 文字水印 `y` 坐标语义由「文字基线」改为「水印顶边」，与图片水印对齐，默认值随之由 `28` 调整为 `10`；显式传过 `y` 的配置需自行减小约一个字号
+
+### 修复
+
+- 修复并发调用 `stopRecording()` 时先前的 Promise 永久挂起的问题，现直接 reject 并提示重复调用
+- 修复水印内容函数抛异常导致渲染循环中断、画面永久冻结的问题
+- 修复录像过程出错时 `stopRecording()` 永久挂起的问题，补充 `onerror` 处理
+- 修复容器尺寸为 0 时画布与媒体流静默失效（全黑且无报错）的问题，现直接抛出明确错误
+
+### 优化
+
+- 非 HTTPS / localhost 环境与不支持 `MediaRecorder` 的浏览器，改为给出可读的错误提示
+- 渲染循环按画布流帧率节流，减少高刷新率屏幕上的无谓绘制
+- `watermark` 的 `text` 与 `img` 同时存在时给出告警，避免配置被静默忽略
+- 水印 `fontSize` 与图片水印 `width`、`height` 的数值解析简化：不再兼容 `"18px"` 这类带单位字符串，非正数统一回退默认值
+
 ## [3.0.0-beta.1](https://github.com/pbstar/p-camera-h5/compare/v2.0.3...v3.0.0-beta.1) - 2026-09-12
 
 ### ⚠ 破坏性变更

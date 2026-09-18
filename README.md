@@ -52,9 +52,9 @@ const camera = await createCamera({
   isMirror: false,
   isAudio: false,
   watermark: [
-    { x: 10, y: 28, text: { content: "p-camera-h5" } },
+    { x: 10, y: 10, text: { content: "p-camera-h5" } },
     // 动态时间水印：content 传函数，每帧求值
-    { x: 10, y: 58, text: { content: () => new Date().toLocaleString(), color: "#fff", fontSize: 20 } },
+    { x: 10, y: 40, text: { content: () => new Date().toLocaleString(), color: "#fff", fontSize: 20 } },
   ],
 });
 
@@ -88,12 +88,14 @@ camera.destroy();
 
 每条水印用 `x`/`y` 定位，`text` 与 `img` 二选一（均为对象）：
 
-| 参数   | 类型             | 默认值 | 说明      |
-| ------ | ---------------- | ------ | --------- |
+| 参数   | 类型             | 默认值 | 说明              |
+| ------ | ---------------- | ------ | ----------------- |
 | `x`    | `number`         | `10`   | 水印 x 坐标（px） |
-| `y`    | `number`         | `28`   | 水印 y 坐标（px） |
-| `text` | `WatermarkText`  | -      | 文字水印  |
-| `img`  | `WatermarkImage` | -      | 图片水印  |
+| `y`    | `number`         | `10`   | 水印 y 坐标（px） |
+| `text` | `WatermarkText`  | -      | 文字水印          |
+| `img`  | `WatermarkImage` | -      | 图片水印          |
+
+> `x`/`y` 均为水印**左上角**坐标，文字与图片语义一致。
 
 文字水印 `WatermarkText`：
 
@@ -114,11 +116,11 @@ camera.destroy();
 ```javascript
 watermark: [
   // 文字水印
-  { x: 10, y: 28, text: { content: "p-camera-h5" } },
+  { x: 10, y: 10, text: { content: "p-camera-h5" } },
   // 动态时间水印：content 传函数，每帧求值
-  { x: 10, y: 58, text: { content: () => new Date().toLocaleString(), color: "#fff", fontSize: 20 } },
+  { x: 10, y: 40, text: { content: () => new Date().toLocaleString(), color: "#fff", fontSize: 20 } },
   // 图片水印
-  { x: 10, y: 88, img: { url: "https://example.com/logo.png", width: 120, height: 40 } },
+  { x: 10, y: 70, img: { url: "https://example.com/logo.png", width: 120, height: 40 } },
 ]
 ```
 
@@ -145,7 +147,9 @@ watermark: [
 1. **安全协议**：需在 HTTPS 或 `localhost` 环境运行（浏览器安全策略要求）。
 2. **权限管理**：首次使用需用户授权摄像头 / 麦克风权限；拒绝授权时 `createCamera` 会 reject。
 3. **录像格式**：`stopRecording()` 返回的 `File` 扩展名与 MIME 一致——Safari 等支持 `mp4` 的浏览器输出 `mp4`，其余输出 `webm`。
-4. **销毁后重建**：`destroy()` 会清空容器内容；需再次使用时请重新调用 `createCamera`。
+4. **容器尺寸**：`el` 需具有有效宽高（`clientWidth` / `clientHeight` 均不为 0），否则 `createCamera()` 会 reject。
+5. **销毁后重建**：`destroy()` 会清空容器内容；需再次使用时请重新调用 `createCamera`。
+6. **切换摄像头**：需先 `destroy()`，再以新的 `facingMode` 重新调用 `createCamera()`。
 
 ## 从 v2 迁移
 

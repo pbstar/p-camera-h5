@@ -25,7 +25,7 @@ export interface WatermarkImage {
 export interface Watermark {
   /** 水印 x 坐标（px），默认 10 */
   x?: number;
-  /** 水印 y 坐标（px），默认 28 */
+  /** 水印 y 坐标（px），默认 10 */
   y?: number;
   /** 文字水印配置 */
   text?: WatermarkText;

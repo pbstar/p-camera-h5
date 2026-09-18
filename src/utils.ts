@@ -37,6 +37,10 @@ export const describeMediaError = (err: unknown): Error => {
         return new Error("摄像头被占用或无法读取");
       case "OverconstrainedError":
         return new Error("无法满足摄像头约束条件");
+      case "NotSupportedError":
+        return new Error("当前环境不支持摄像头访问，请确认运行在 HTTPS 或 localhost 下");
+      case "SecurityError":
+        return new Error("当前页面被浏览器安全策略拦截，无法访问摄像头");
     }
   }
   return err instanceof Error ? err : new Error(String(err));

@@ -11,13 +11,16 @@ export const DEFAULT_TEXT_COLOR = "rgba(255, 255, 255, 0.5)";
 export const DEFAULT_WATERMARK_X = 10;
 
 /** 默认水印 y 坐标（px） */
-export const DEFAULT_WATERMARK_Y = 28;
+export const DEFAULT_WATERMARK_Y = 10;
 
 /** 默认文字水印字号（px） */
 export const DEFAULT_FONT_SIZE = 18;
 
 /** 默认图片水印尺寸（px） */
 export const DEFAULT_IMG_SIZE = 100;
+
+/** 画布流采集帧率（fps），渲染循环按同一帧率节流 */
+export const CANVAS_STREAM_FPS = 30;
 
 /**
  * 容器模板：视频展示层 + 加载中/错误提示层。

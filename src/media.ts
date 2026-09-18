@@ -1,5 +1,10 @@
 import type { ResolvedOptions, FacingMode } from "./types";
-import { prepareWatermarks, drawWatermarks, type PreparedWatermark } from "./watermark";
+import { CANVAS_STREAM_FPS } from "./constants";
+import {
+  prepareWatermarks,
+  drawWatermarks,
+  type PreparedWatermark,
+} from "./watermark";
 
 /** 相机运行时状态 */
 export interface CameraEngine {
@@ -23,10 +28,16 @@ export interface CameraEngine {
 }
 
 /** 打开指定朝向的摄像头流 */
-const openStream = (
+const openStream = async (
   facingMode: FacingMode,
   isAudio: boolean
 ): Promise<MediaStream> => {
+  // 非安全上下文（http 且非 localhost）下浏览器不暴露该 API，提前拦截以给出可读提示
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error(
+      "[p-camera-h5] 当前环境不支持摄像头访问，请确认运行在 HTTPS 或 localhost 下"
+    );
+  }
   // 720p（ideal 软约束：设备不支持时浏览器自动降级）
   return navigator.mediaDevices.getUserMedia({
     video: {
@@ -51,6 +62,12 @@ export const setupCamera = async (
   const canvas = document.createElement("canvas");
   const width = container.clientWidth;
   const height = container.clientHeight;
+  // 尺寸为 0 时画布与媒体流会静默失效（全黑且无报错），此处直接拦截
+  if (width === 0 || height === 0) {
+    throw new Error(
+      "[p-camera-h5] 容器尺寸为 0，请确认 el 元素已渲染且具有有效宽高"
+    );
+  }
   const dpr = window.devicePixelRatio || 1;
 
   // 画布按设备像素比放大，保证截图/录像清晰度
@@ -94,7 +111,7 @@ export const setupCamera = async (
 /** 搭建合成管线：画布流（含音频轨）接到展示层 video，再逐帧绘制 */
 const startPipeline = (engine: CameraEngine): void => {
   if (!engine.mediaStream) throw new Error("[p-camera-h5] 媒体流未初始化");
-  const processedStream = engine.canvas.captureStream(30);
+  const processedStream = engine.canvas.captureStream(CANVAS_STREAM_FPS);
   if (engine.isAudio) {
     const audioTracks = engine.mediaStream.getAudioTracks();
     if (audioTracks.length > 0) processedStream.addTrack(audioTracks[0]);
@@ -134,11 +151,23 @@ const stopRender = (engine: CameraEngine): void => {
 
 /** 渲染循环：逐帧绘制视频画面与水印 */
 const renderLoop = (video: HTMLVideoElement, engine: CameraEngine): void => {
-  const draw = () => {
-    drawFrame(video, engine);
+  // 画布流按 CANVAS_STREAM_FPS 采样，绘制更快只是白跑帧，故对齐同一帧率
+  const frameInterval = 1000 / CANVAS_STREAM_FPS;
+  let lastDrawAt = 0;
+
+  const draw = (timestamp: number): void => {
+    if (timestamp - lastDrawAt >= frameInterval) {
+      lastDrawAt = timestamp;
+      try {
+        drawFrame(video, engine);
+      } catch (err) {
+        // 单帧绘制失败不能中断循环，否则画面会永久冻结
+        console.warn(`[p-camera-h5] 帧绘制失败，已跳过该帧: ${(err as Error).message}`);
+      }
+    }
     engine.animationFrameId = requestAnimationFrame(draw);
   };
-  draw();
+  engine.animationFrameId = requestAnimationFrame(draw);
 };
 
 /** 绘制单帧 */

@@ -29,6 +29,9 @@ export type {
   FacingMode,
 } from "./types";
 
+/** MediaRecorder 的 error 事件在部分 TS 版本中未声明 error 字段 */
+type MediaRecorderErrorEvent = Event & { error?: DOMException };
+
 /** 校验并合并配置默认值 */
 const resolveConfig = (options: CameraOptions): ResolvedOptions => {
   if (!options || !options.el || !(options.el instanceof HTMLElement)) {
@@ -57,7 +60,7 @@ export const createCamera = async (
   const config = resolveConfig(options);
   const { el } = config;
 
-  // 渲染模板
+  // 渲染模板（样式随容器一同插入，destroy 清空容器时同步移除）
   el.innerHTML = elTemplate;
   const container = el.querySelector(".p-camera-h5") as HTMLElement | null;
   if (!container) throw new Error("[p-camera-h5] 模板渲染异常：未找到 .p-camera-h5 容器");
@@ -79,12 +82,24 @@ export const createCamera = async (
   let chunks: Blob[] = [];
   let recording = false;
   let paused = false;
+  // stop 事件是异步的，用它标记「已请求停止、尚未收到 onstop」，避免重复调用覆盖回调
+  let stopping = false;
   // destroy 时用于拒绝尚在等待 onstop 的 stopRecording 调用，避免调用方永久挂起
   let rejectPendingStop: ((err: Error) => void) | null = null;
 
   const ensureAlive = (): CameraEngine => {
     if (!engine) throw new Error("[p-camera-h5] 相机实例已销毁");
     return engine;
+  };
+
+  /** 录像结束（正常停止或出错）后统一重置状态 */
+  const resetRecording = (): void => {
+    recording = false;
+    paused = false;
+    stopping = false;
+    recorder = null;
+    chunks = [];
+    rejectPendingStop = null;
   };
 
   /** 拍照，返回 JPEG 图片文件 */
@@ -106,6 +121,12 @@ export const createCamera = async (
     new Promise((resolve, reject) => {
       const current = ensureAlive();
       if (recording) return reject(new Error("[p-camera-h5] 已在录像中"));
+      // 非安全上下文或不支持的浏览器中 MediaRecorder 不存在，提前拦截
+      if (typeof MediaRecorder === "undefined") {
+        return reject(
+          new Error("[p-camera-h5] 当前浏览器不支持 MediaRecorder，无法录像")
+        );
+      }
       if (!current.canvasStream) {
         return reject(new Error("[p-camera-h5] 媒体流未就绪"));
       }
@@ -128,16 +149,23 @@ export const createCamera = async (
   const stopRecording = (): Promise<File> =>
     new Promise((resolve, reject) => {
       if (!recorder) return reject(new Error("[p-camera-h5] 未开始录像"));
+      // 重复调用会覆盖 onstop，使先前的调用永久挂起，因此直接拒绝
+      if (stopping) {
+        return reject(new Error("[p-camera-h5] 正在停止录像，请勿重复调用"));
+      }
       const current = recorder;
+      stopping = true;
       current.onstop = () => {
         const type = current.mimeType || "video/webm";
         const blob = new Blob(chunks, { type });
-        recording = false;
-        paused = false;
-        recorder = null;
-        chunks = [];
-        rejectPendingStop = null;
+        resetRecording();
         resolve(blobToFile(blob, extFromMime(type)));
+      };
+      // 录制出错时 onstop 不保证触发，需在此结束等待，避免 Promise 永久挂起
+      current.onerror = (event) => {
+        const cause = (event as MediaRecorderErrorEvent).error;
+        resetRecording();
+        reject(describeMediaError(cause ?? new Error("录像过程发生错误")));
       };
       // 销毁时 rejectPendingStop 会被调用，避免 Promise 永久挂起
       rejectPendingStop = reject;
@@ -149,6 +177,9 @@ export const createCamera = async (
     if (!recording || !recorder) {
       throw new Error("[p-camera-h5] 未开始录像");
     }
+    if (stopping) {
+      throw new Error("[p-camera-h5] 录像正在停止，无法暂停");
+    }
     if (paused) return; // 幂等
     recorder.pause();
     paused = true;
@@ -158,6 +189,9 @@ export const createCamera = async (
   const resumeRecording = (): void => {
     if (!recording || !recorder) {
       throw new Error("[p-camera-h5] 未开始录像");
+    }
+    if (stopping) {
+      throw new Error("[p-camera-h5] 录像正在停止，无法恢复");
     }
     if (!paused) return; // 幂等
     recorder.resume();
@@ -172,15 +206,13 @@ export const createCamera = async (
     if (!engine) return; // 幂等
     if (recorder && recorder.state !== "inactive") {
       recorder.onstop = null;
+      recorder.onerror = null;
       recorder.stop();
     }
-    recording = false;
-    recorder = null;
-    chunks = [];
-    if (rejectPendingStop) {
-      rejectPendingStop(new Error("[p-camera-h5] 相机实例已销毁，录像终止"));
-      rejectPendingStop = null;
-    }
+    // 先取出待拒绝的调用，resetRecording 会清空该引用
+    const pending = rejectPendingStop;
+    resetRecording();
+    if (pending) pending(new Error("[p-camera-h5] 相机实例已销毁，录像终止"));
     destroyCamera(engine);
     el.innerHTML = "";
     engine = null;
