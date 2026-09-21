@@ -2,6 +2,42 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.0.0](https://github.com/pbstar/p-camera-h5/compare/v2.0.3...v3.0.0) - 2026-09-21
+
+v3 首个正式版本，汇总 `3.0.0-beta.1` 与 `3.0.0-beta.2` 的主要变更。升级前请重点确认下方的破坏性变更。
+
+### ⚠ 破坏性变更
+
+- API 由类实例 `new pCameraH5(options)` 重构为工厂函数 `createCamera(options)`，返回 `Promise<CameraController>`
+- 容器只渲染视频层，移除内置按钮与默认水印
+- 水印配置统一为对象形式：定位（`x`/`y`）在外层，内容收进 `text` / `img`，不再支持字符串简写
+- 文字水印 `y` 坐标语义由「文字基线」改为「水印顶边」，与图片水印对齐，默认值由 `28` 调整为 `10`
+- 拍照输出格式由 PNG 改为 JPEG
+- 参数校验失败、方法未就绪或实例已销毁时，由静默失败改为 `throw` / `reject`
+- `startRecording()` 返回值由 `Promise<boolean>` 改为 `Promise<void>`
+
+### 新增
+
+- 录像控制：`pauseRecording()` / `resumeRecording()` / `isRecording()`
+- 文字水印 `text.content` 支持传函数，每帧求值，可实现时间等动态水印
+
+### 修复
+
+- 修复 `stopRecording()` 在重复调用、录像过程出错、实例被销毁三种场景下 Promise 永久挂起的问题
+- 修复录像内容为 `webm` 却以 `.mp4` 命名的问题，改为按 `MediaRecorder.isTypeSupported` 探测实际格式
+- 修复水印内容函数抛异常导致渲染循环中断、画面永久冻结的问题
+- 修复容器尺寸为 0 时画布与媒体流静默失效（全黑且无报错）的问题，现直接抛出明确错误
+- 修复图片水印加载失败导致整个相机初始化中断的问题，现单张失败仅告警跳过
+- 修复 CJS 入口损坏：`require` 条件指向 `.cjs` 产物，避免 UMD 被当作 ESM 解析
+
+### 优化
+
+- 拍照由 `toDataURL` + base64 转 File 改为 `canvas.toBlob`，降低内存占用
+- 非 HTTPS / localhost 环境与不支持 `MediaRecorder` 的浏览器，改为给出可读的错误提示
+- 渲染循环按画布流帧率节流，减少高刷新率屏幕上的无谓绘制
+- 水印规范化与绘制拆分为独立模块；`text` 与 `img` 同时配置时告警，避免被静默忽略
+- TypeScript 声明文件改为构建时从源码自动生成，移除未使用的构建依赖
+
 ## [3.0.0-beta.2](https://github.com/pbstar/p-camera-h5/compare/v3.0.0-beta.1...v3.0.0-beta.2) - 2026-09-18
 
 ### ⚠ 破坏性变更
